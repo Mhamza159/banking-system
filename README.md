@@ -44,19 +44,7 @@ Copy `.env.example` to `.env` and fill in your credentials:
 cp .env.example .env
 ```
 
-Key environment variables:
-```env
-PORT=3000
-NODE_ENV=development
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/banking-db?retryWrites=true&w=majority
-JWT_SECRET=your_super_secret_jwt_key
-COOKIE_SECRET=your_cookie_secret_key
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM="Enterprise Banking" <no-reply@banking.com>
-```
+
 
 ### 3. Install Dependencies
 ```bash
