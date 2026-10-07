@@ -1,0 +1,56 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Form as TransferForm.jsx
+    participant Modal as TransferModal.jsx (Review)
+    participant BankCtx as BankingContext
+    participant Axios as Axios API Client
+    participant Server as Express Server (:3000)
+    participant MongoSession as MongoDB ACID Session
+
+    %% 1. Input & Validation
+    User->>Form: Selects source account, enters recipient & amount ($100.00)
+    Form->>Form: Checks client rules:<br/>- amount > 0<br/>- senderAccountId != receiverAccountId<br/>- availableBalance >= amountInCents (10,000)
+    alt Balance Insufficient
+        Form-->>User: Inline Error: "Insufficient funds. Available: $50.00, Required: $100.00"<br/>("Review Transfer" button disabled)
+    else Balance Sufficient
+        User->>Form: Clicks "Review Transfer"
+    end
+
+    %% 2. Two-Step Confirmation & Idempotency Generation
+    Form->>Modal: Opens Confirmation Dialog with transfer details
+    Modal->>Modal: Generates RFC 4122 UUID v4 Idempotency Key:<br/>e.g. "idemp-uuid-7a91-4c28-98e1"
+    Modal->>User: Displays Transaction Summary:<br/>- Sender Account: 9178200360<br/>- Recipient Account: 6751823154<br/>- Amount: $100.00 (Fee: $0.00)<br/>- Net Deduction: $100.00
+
+    %% 3. Confirm & Lock Button
+    User->>Modal: Clicks "Confirm & Send Funds"
+    Modal->>Modal: Locks UI: isSubmitting = true (Disables button, renders spinner)<br/>Prevents accidental double-clicks
+
+    %% 4. HTTP Dispatch with Idempotency-Key
+    Modal->>Axios: POST /api/v1/transactions/transfer<br/>Header: Idempotency-Key: idemp-uuid-7a91-4c28-98e1<br/>Body: { senderAccountId, receiverAccountId, amountInCents: 10000, description }
+    Axios->>Server: HTTP POST (withCredentials: true)
+
+    %% 5. Backend ACID Multi-Document Session
+    Server->>Server: 1. Verify Idempotency Cache
+    Server->>Server: 2. Validate Accounts are ACTIVE & Not Frozen
+    Server->>MongoSession: 3. session.startTransaction()
+    MongoSession->>MongoSession: 4. Aggregate sender balance within session
+    MongoSession->>MongoSession: 5. Insert Transaction (status: PENDING)
+    MongoSession->>MongoSession: 6. Insert DEBIT entry in Ledger for Sender
+    MongoSession->>MongoSession: 7. Insert CREDIT entry in Ledger for Receiver
+    MongoSession->>MongoSession: 8. Update Transaction (status: COMPLETED)
+    MongoSession->>Server: 9. session.commitTransaction()
+
+    %% 6. Success Response & Receipt
+    Server-->>Axios: 201 Created { transaction: { id, status: "COMPLETED", ... }, senderBalance: { balanceInCents: 40000 } }
+    Axios-->>Modal: Success Payload
+    Modal->>Modal: Closes review modal -> Opens TransactionReceipt.jsx
+    Modal->>BankCtx: refreshBalances() (Triggers re-sync of active accounts)
+    BankCtx-->>Form: Global balance updated to $400.00
+    Modal->>User: Displays Verified Receipt with Copyable Transaction ID
+
+    %% 7. Edge Case: Duplicate Replay
+    Note over User,Server: REPLAY SCENARIO: Network Retry with Identical Idempotency-Key
+    User->>Server: Re-submits POST with same Idempotency-Key
+    Server->>Server: Detects existing COMPLETED transaction in DB
+    Server-->>User: 200 OK (cached: true, returns original receipt without modifying ledger)

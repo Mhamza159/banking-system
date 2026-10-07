@@ -1,0 +1,1077 @@
+{
+  "info": {
+    "name": "Banking Backend API — Full Suite (Phases 1-5)",
+    "description": "Complete Postman testing collection for Banking Backend API. Includes Auth, Account Management, Double-Entry Ledger, and Phase 5 ACID Transaction Transfers with Idempotency Engine.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accountId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "receiverAccountId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transactionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "idemp-key-postman-01",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Service is healthy', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.status).to.eql('OK');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Authentication",
+      "item": [
+        {
+          "name": "1. Register Customer (Auto-opens Savings Account)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate random email to avoid conflicts",
+                  "const randomNum = Math.floor(Math.random() * 100000);",
+                  "pm.environment.set('temp_email', `customer_${randomNum}@banking.local`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "    pm.collectionVariables.set('token', json.data.token);",
+                  "    console.log('Saved token:', json.data.token);",
+                  "}",
+                  "if (json.data && json.data.account) {",
+                  "    pm.collectionVariables.set('accountId', json.data.account.id);",
+                  "    console.log('Saved accountId:', json.data.account.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hamza Tariq\",\n  \"email\": \"{{temp_email}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "2. Duplicate Email Registration (Expected 409 Conflict)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hamza Duplicate\",\n  \"email\": \"{{temp_email}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "3. Login With Valid Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "    pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{temp_email}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "4. Login With Invalid Password (Expected 401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{temp_email}}\",\n  \"password\": \"WrongPassword999!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "5. Get Logged-In User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "6. Logout & Revoke Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "7. Access Profile with Revoked Token (Expected 401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Account Management",
+      "item": [
+        {
+          "name": "1. Get All Accounts for Logged-In Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.accounts && json.data.accounts.length > 0) {",
+                  "    pm.collectionVariables.set('accountId', json.data.accounts[0]._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "me"]
+            }
+          }
+        },
+        {
+          "name": "2. Create Secondary Checking Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountType\": \"CHECKING\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts"]
+            }
+          }
+        },
+        {
+          "name": "3. Duplicate Checking Account Creation (Expected 409 Conflict)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountType\": \"CHECKING\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Double-Entry Ledger & Balance (Phase 4)",
+      "item": [
+        {
+          "name": "1. Check Initial Account Balance ($0.00)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Initial balance is zero', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.balanceInCents).to.eql(0);",
+                  "    pm.expect(json.data.formattedBalance).to.eql('$0.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountId}}", "balance"]
+            }
+          }
+        },
+        {
+          "name": "2. Deposit Faucet ($500.00 = 50,000 cents)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Balance updated to $500.00', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.balanceInCents).to.eql(50000);",
+                  "    pm.expect(json.data.formattedBalance).to.eql('$500.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountInCents\": 50000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountId}}", "deposit"]
+            }
+          }
+        },
+        {
+          "name": "3. Get Account Balance After First Deposit ($500.00)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Balance is $500.00', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.balanceInCents).to.eql(50000);",
+                  "    pm.expect(json.data.formattedBalance).to.eql('$500.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountId}}", "balance"]
+            }
+          }
+        },
+        {
+          "name": "4. Deposit Additional Faucet ($250.00 = 25,000 cents)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Total balance updated to $750.00', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.balanceInCents).to.eql(75000);",
+                  "    pm.expect(json.data.formattedBalance).to.eql('$750.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountInCents\": 25000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountId}}", "deposit"]
+            }
+          }
+        },
+        {
+          "name": "5. Get Account Balance After Second Deposit ($750.00 Aggregated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Aggregation pipeline correctly summed credits', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.balanceInCents).to.eql(75000);",
+                  "    pm.expect(json.data.formattedBalance).to.eql('$750.00');",
+                  "    pm.expect(json.data.totalCredits).to.eql(75000);",
+                  "    pm.expect(json.data.totalDebits).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountId}}", "balance"]
+            }
+          }
+        },
+        {
+          "name": "6. Invalid Deposit - Negative Amount (Expected 400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountInCents\": -500\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountId}}", "deposit"]
+            }
+          }
+        },
+        {
+          "name": "7. Invalid Account ID Format (Expected 400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/invalid-account-id/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "invalid-account-id", "balance"]
+            }
+          }
+        },
+        {
+          "name": "8. Non-Existent Account Balance Query (Expected 404 Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/60c72b2f9b1d8b2bad000000/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "60c72b2f9b1d8b2bad000000", "balance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - ACID Transfers & Idempotency (Phase 5)",
+      "item": [
+        {
+          "name": "0. Register Receiver Customer (User B) [Auto-saves receiverAccountId]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const randomNum = Math.floor(Math.random() * 100000);",
+                  "pm.environment.set('receiver_email', `receiver_${randomNum}@banking.local`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.account) {",
+                  "    pm.collectionVariables.set('receiverAccountId', json.data.account.id);",
+                  "    console.log('Saved receiverAccountId:', json.data.account.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Receiver User B\",\n  \"email\": \"{{receiver_email}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "1. Atomic Money Transfer ($100.00 = 10,000 cents)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const key = 'idemp-' + Date.now();",
+                  "pm.collectionVariables.set('idempotencyKey', key);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.transaction) {",
+                  "    pm.collectionVariables.set('transactionId', json.data.transaction.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderAccountId\": \"{{accountId}}\",\n  \"receiverAccountId\": \"{{receiverAccountId}}\",\n  \"amountInCents\": 10000,\n  \"description\": \"Consulting services payment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "transfer"]
+            }
+          }
+        },
+        {
+          "name": "2. Duplicate Transfer with Same Idempotency-Key (Cached 200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is cached receipt', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.cached).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderAccountId\": \"{{accountId}}\",\n  \"receiverAccountId\": \"{{receiverAccountId}}\",\n  \"amountInCents\": 10000,\n  \"description\": \"Consulting services payment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "transfer"]
+            }
+          }
+        },
+        {
+          "name": "3. Overdraft Transfer (Expected 400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "idemp-overdraft-test"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderAccountId\": \"{{accountId}}\",\n  \"receiverAccountId\": \"{{receiverAccountId}}\",\n  \"amountInCents\": 10000000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "transfer"]
+            }
+          }
+        },
+        {
+          "name": "4. Self-Transfer (Expected 400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "idemp-self-test"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderAccountId\": \"{{accountId}}\",\n  \"receiverAccountId\": \"{{accountId}}\",\n  \"amountInCents\": 5000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "transfer"]
+            }
+          }
+        },
+        {
+          "name": "5. Get Transaction History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/history?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Get Single Transaction By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "{{transactionId}}"]
+            }
+          }
+        },
+        {
+          "name": "7. Invalid Transaction ID Format (Expected 400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/invalid-tx-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "invalid-tx-id"]
+            }
+          }
+        },
+        {
+          "name": "8. Non-Existent Transaction ID (Expected 404 Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions/60c72b2f9b1d8b2bad000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions", "60c72b2f9b1d8b2bad000000"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

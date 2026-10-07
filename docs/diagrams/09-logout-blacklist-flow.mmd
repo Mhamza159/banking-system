@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    actor Client
+    participant AuthCtrl as Auth Controller
+    participant JWT as JWT Engine
+    participant BlacklistMod as Blacklist Model (MongoDB)
+    participant AuthMiddleware as authMiddleware
+    participant ProtectedRoute as Protected Route (/api/v1/accounts/me)
+
+    Note over Client,ProtectedRoute: Step 1: User Calls Logout API
+    Client->>AuthCtrl: POST /api/v1/auth/logout<br/>Cookie: [token=eyJhbGciOi...]
+    AuthCtrl->>JWT: jwt.decode(token) -> extract exp timestamp
+    AuthCtrl->>BlacklistMod: create({ token: token, expiresAt: new Date(exp * 1000) })
+    BlacklistMod-->>AuthCtrl: Blacklist record saved with TTL index
+    AuthCtrl->>Client: 200 OK + Clear-Cookie: token
+
+    Note over Client,ProtectedRoute: Step 2: Attacker or Client Re-uses Old Token
+    Client->>AuthMiddleware: GET /api/v1/accounts/me<br/>Headers: [Authorization: Bearer eyJhbGciOi...] or Stale Cookie
+    AuthMiddleware->>BlacklistMod: findOne({ token: token })
+    alt Token Found in Blacklist Collection
+        BlacklistMod-->>AuthMiddleware: Document Exists
+        AuthMiddleware-->>Client: 401 Unauthorized<br/>{ error: "Token has been revoked. Please log in again." }
+    else Token Not Found & Valid
+        AuthMiddleware->>ProtectedRoute: Forward Request (req.user attached)
+    end
+
+    Note over BlacklistMod: Step 3: Automatic Background Cleanup
+    Note over BlacklistMod: MongoDB background TTL thread scans expiresAt index (every 60s).<br/>When expiresAt < Date.now(), MongoDB deletes the blacklisted document automatically.<br/>Zero database memory leak!

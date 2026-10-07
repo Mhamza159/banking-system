@@ -1,0 +1,33 @@
+{
+  "name": "banking-system",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "node scripts/verify-all.js",
+    "verify": "node scripts/verify-all.js",
+    "test:email": "node scripts/test-email.js",
+    "clean:db": "node scripts/clean-db.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "dev:client": "npm --prefix client run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:client\"",
+    "build:client": "npm --prefix client run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.0",
+    "nodemailer": "^10.0.9",
+    "uuid": "^14.0.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
+}

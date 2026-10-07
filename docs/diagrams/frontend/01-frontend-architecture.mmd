@@ -1,0 +1,96 @@
+flowchart TB
+    subgraph Client["Client Browser (React 18 SPA + Vite)"]
+        subgraph Viewport["Responsive Viewport Layer"]
+            Desktop["Desktop View (>= 1024px)"]
+            Mobile["Mobile / Tablet (< 1024px)"]
+        end
+
+        subgraph Routing["Routing & Security Guards (React Router v6)"]
+            Router["AppRoutes"]
+            PublicRoute["Public Routes (Landing /)"]
+            GuestRoute["GuestGuard (/login, /register)"]
+            AuthRoute["AuthGuard (/dashboard, /accounts, /transfer, /tx)"]
+        end
+
+        subgraph Layouts["Layout Architecture"]
+            AppShell["AppLayout (Root + ToastContainer)"]
+            AuthLayout["AuthLayout (Split Branded Panel)"]
+            DashLayout["DashboardLayout (Sidebar + Header + Main)"]
+        end
+
+        subgraph Pages["Application Pages"]
+            Landing["LandingPage"]
+            Login["LoginPage"]
+            Register["RegisterPage"]
+            Dashboard["DashboardPage"]
+            Accounts["AccountsPage"]
+            Transfer["TransferPage"]
+            Transactions["TransactionsPage"]
+            Profile["ProfilePage"]
+        end
+
+        subgraph StateLayer["State Management Architecture"]
+            AuthCtx["AuthContext (User, Session, Logout)"]
+            BankCtx["BankingContext (Accounts, Active Account, Sync)"]
+            ToastCtx["ToastContext (Global Notifications)"]
+            LocalState["Component State (Forms, Modals, Filters)"]
+        end
+
+        subgraph Primitives["Reusable Design System Primitives"]
+            Buttons["Button (Variants + Loading)"]
+            Inputs["Input & Select (Validation)"]
+            Modals["Modal (Focus Trap + Backdrop)"]
+            Cards["Card (Glassmorphic Surface)"]
+            Badges["Badge (Status Colors)"]
+            Money["MoneyDisplay (Cents Formatter)"]
+            Skeletons["Skeleton (Shimmer Loaders)"]
+        end
+
+        subgraph APILayer["API Integration Layer"]
+            AxiosClient["Central Axios Client (withCredentials: true)"]
+            AuthService["authService"]
+            AccountService["accountService"]
+            TxService["transactionService"]
+            InterceptorReq["Request Interceptor (Idempotency-Key)"]
+            InterceptorRes["Response Interceptor (ApiError & 401 Handler)"]
+        end
+    end
+
+    subgraph SecurityBoundary["Transport & Security Protocols"]
+        CookieSec["HTTP-Only Cookie (token)"]
+        IdempHeader["Header: Idempotency-Key (UUID v4)"]
+        CORSSec["CORS with Credentials (Origin Mirrored)"]
+    end
+
+    subgraph BackendSystem["Banking Backend Infrastructure (:3000)"]
+        ExpressApp["Express.js Server (src/app.js)"]
+        AuthMiddleware["authMiddleware (Cookie/Bearer + Blacklist)"]
+        FeatureControllers["Auth, Account & Tx Controllers"]
+        MongoAtlas[("MongoDB Atlas Replica Set\n- Users, Accounts\n- Append-Only Ledger\n- Transactions (ACID)\n- Blacklist (TTL Index)")]
+    end
+
+    %% Connections
+    Viewport --> Routing
+    Routing --> Layouts
+    Layouts --> Pages
+    Pages --> Primitives
+    Pages --> StateLayer
+    StateLayer --> APILayer
+    APILayer --> AxiosClient
+    AxiosClient --> InterceptorReq
+    AxiosClient --> InterceptorRes
+    InterceptorReq --> SecurityBoundary
+    SecurityBoundary --> BackendSystem
+    BackendSystem --> MongoAtlas
+
+    classDef client fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef state fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef api fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef security fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+    classDef backend fill:#1e293b,stroke:#94a3b8,stroke-width:2px,color:#f8fafc;
+
+    class Client,Pages,Primitives,Layouts client;
+    class StateLayer,AuthCtx,BankCtx,ToastCtx state;
+    class APILayer,AxiosClient,AuthService,AccountService,TxService api;
+    class SecurityBoundary,CookieSec,IdempHeader,CORSSec security;
+    class BackendSystem,ExpressApp,AuthMiddleware,FeatureControllers,MongoAtlas backend;

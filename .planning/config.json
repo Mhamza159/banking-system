@@ -1,0 +1,13 @@
+{
+  "mode": "standard",
+  "sourceOfTruth": "speckit",
+  "specPath": ".specify/specs/banking-frontend-react/spec.md",
+  "planPath": ".specify/specs/banking-frontend-react/plan.md",
+  "tasksPath": ".specify/specs/banking-frontend-react/tasks.md",
+  "diagramsPath": "docs/frontend-architecture.md",
+  "viewerPath": "docs/diagrams/frontend/index.html",
+  "workflow": {
+    "autoAdvance": false,
+    "verifyPerPhase": true
+  }
+}

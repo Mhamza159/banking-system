@@ -1,0 +1,98 @@
+flowchart TD
+    App["App.jsx (Root Entry)"] --> ToastProv["ToastProvider (ToastContext)"]
+    ToastProv --> AuthProv["AuthProvider (AuthContext)"]
+    AuthProv --> BankProv["BankingProvider (BankingContext)"]
+    BankProv --> AppRoutes["AppRoutes.jsx (React Router)"]
+
+    AppRoutes --> PublicViews["Public Route Layer"]
+    AppRoutes --> GuestViews["Guest-Only Guard Layer"]
+    AppRoutes --> ProtectedViews["Protected Guard Layer"]
+
+    subgraph PublicViewsGroup["Public Views"]
+        PublicViews --> LandingPage["LandingPage.jsx"]
+        LandingPage --> HeroSec["HeroSection.jsx"]
+        LandingPage --> FeatureGrid["FeatureGrid.jsx"]
+        LandingPage --> SecurityStats["SecurityStats.jsx"]
+        LandingPage --> CurrencyTicker["CurrencyTicker.jsx"]
+        LandingPage --> Footer["Footer.jsx"]
+    end
+
+    subgraph GuestViewsGroup["Guest Views (Unauthenticated)"]
+        GuestViews --> AuthLayout["AuthLayout.jsx (Branded Split Screen)"]
+        AuthLayout --> LoginPage["LoginPage.jsx"]
+        AuthLayout --> RegisterPage["RegisterPage.jsx"]
+        LoginPage --> PasswordInput["Input.jsx (with Show/Hide)"]
+        RegisterPage --> PasswordStrength["PasswordStrengthMeter.jsx"]
+    end
+
+    subgraph ProtectedViewsGroup["Protected Views (Authenticated Shell)"]
+        ProtectedViews --> DashboardLayout["DashboardLayout.jsx"]
+        
+        DashboardLayout --> Sidebar["Sidebar.jsx (Desktop Navigation)"]
+        DashboardLayout --> MobileNav["MobileNav.jsx (Slide-over Drawer)"]
+        DashboardLayout --> Header["Header.jsx (Active Account, Avatar, Logout)"]
+        DashboardLayout --> PageContent["Page Content Viewport"]
+
+        PageContent --> DashboardPage["DashboardPage.jsx"]
+        PageContent --> AccountsPage["AccountsPage.jsx"]
+        PageContent --> TransferPage["TransferPage.jsx"]
+        PageContent --> TransactionsPage["TransactionsPage.jsx"]
+        PageContent --> ProfilePage["ProfilePage.jsx"]
+    end
+
+    subgraph DashboardComponents["Dashboard Domain Components"]
+        DashboardPage --> BalanceCard["BalanceCard.jsx (Gradient + Quick Actions)"]
+        DashboardPage --> LedgerSummary["LedgerSummaryCard.jsx (Inflow vs Outflow)"]
+        DashboardPage --> AccountCarousel["AccountCarousel.jsx (Savings / Checking)"]
+        DashboardPage --> RecentTxFeed["RecentTransactions.jsx (Activity Feed)"]
+    end
+
+    subgraph AccountsComponents["Accounts Domain Components"]
+        AccountsPage --> AccountCard["AccountCard.jsx (10-Digit Copy + Status)"]
+        AccountsPage --> CreateAccountModal["CreateAccountModal.jsx (Open Checking)"]
+        AccountsPage --> FaucetDepositModal["FaucetDepositModal.jsx (Deposit Presets)"]
+    end
+
+    subgraph TransferComponents["Transfer Domain Components"]
+        TransferPage --> TransferForm["TransferForm.jsx (Balance Validation)"]
+        TransferPage --> TransferModal["TransferModal.jsx (Two-Step Review)"]
+        TransferPage --> TransactionReceipt["TransactionReceipt.jsx (Print/Copy Receipt)"]
+    end
+
+    subgraph TransactionsComponents["Transactions Domain Components"]
+        TransactionsPage --> TransactionFilters["TransactionFilters.jsx (Status Tabs + Search)"]
+        TransactionsPage --> TransactionTable["TransactionTable.jsx (Sortable Columns)"]
+        TransactionTable --> TransactionRow["TransactionRow.jsx (Credit/Debit Badges)"]
+        TransactionsPage --> Pagination["Pagination.jsx (Page Jump & Limit)"]
+    end
+
+    subgraph CommonPrimitives["Shared UI Primitives (Design System)"]
+        Button["Button.jsx"]
+        Input["Input.jsx"]
+        Select["Select.jsx"]
+        Modal["Modal.jsx"]
+        Card["Card.jsx"]
+        Badge["Badge.jsx"]
+        Skeleton["Skeleton.jsx"]
+        MoneyDisplay["MoneyDisplay.jsx"]
+        Toast["Toast.jsx"]
+        EmptyState["EmptyState.jsx"]
+    end
+
+    %% Dependencies of pages on primitives
+    DashboardPage -.-> Card & Skeleton & MoneyDisplay
+    AccountsPage -.-> Modal & Button & Badge
+    TransferPage -.-> Modal & Button & Input & Select
+    TransactionsPage -.-> Badge & MoneyDisplay & EmptyState
+
+    classDef root fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef layout fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef pages fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef components fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+    classDef primitives fill:#1e293b,stroke:#94a3b8,stroke-width:2px,color:#f8fafc;
+
+    class App,ToastProv,AuthProv,BankProv,AppRoutes root;
+    class PublicViews,GuestViews,ProtectedViews,AuthLayout,DashboardLayout,Sidebar,MobileNav,Header layout;
+    class LandingPage,LoginPage,RegisterPage,DashboardPage,AccountsPage,TransferPage,TransactionsPage,ProfilePage pages;
+    class BalanceCard,LedgerSummary,AccountCard,TransferModal,TransactionTable,CreateAccountModal,FaucetDepositModal components;
+    class Button,Input,Select,Modal,Card,Badge,Skeleton,MoneyDisplay,Toast,EmptyState primitives;

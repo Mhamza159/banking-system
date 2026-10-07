@@ -1,0 +1,59 @@
+erDiagram
+    User ||--o{ Account : "owns (1:N)"
+    Account ||--o{ Transaction : "as sender"
+    Account ||--o{ Transaction : "as receiver"
+    Account ||--o{ Ledger : "has journal entries (1:N)"
+    Transaction ||--|{ Ledger : "produces exactly two (1:2)"
+
+    User {
+        ObjectId _id PK
+        String name "min: 2, max: 100"
+        String email UK "RFC 5322 regex, lowercase, indexed"
+        String password "bcrypt hash (10 rounds), select: false"
+        String role "enum: CUSTOMER, ADMIN"
+        Boolean isEmailVerified "default: false"
+        Date createdAt "timestamp"
+        Date updatedAt "timestamp"
+    }
+
+    Account {
+        ObjectId _id PK
+        ObjectId user FK "ref: User, indexed"
+        String accountNumber UK "10-digit unique string, indexed"
+        String accountType "enum: SAVINGS, CHECKING"
+        String currency "enum: USD, EUR, PKR, GBP"
+        String status "enum: ACTIVE, INACTIVE, SUSPENDED, FROZEN, indexed"
+        Date createdAt "timestamp"
+        Date updatedAt "timestamp"
+    }
+
+    Transaction {
+        ObjectId _id PK
+        String idempotencyKey UK "UUIDv4 unique, indexed"
+        ObjectId senderAccount FK "ref: Account, indexed"
+        ObjectId receiverAccount FK "ref: Account, indexed"
+        Number amount "positive integer in minor units (cents)"
+        String currency "default: USD"
+        String status "enum: PENDING, COMPLETED, FAILED, indexed"
+        String failureReason "null or error description"
+        String note "max: 255 chars"
+        Date createdAt "timestamp, indexed"
+        Date updatedAt "timestamp"
+    }
+
+    Ledger {
+        ObjectId _id PK
+        ObjectId transactionId FK "ref: Transaction, indexed"
+        ObjectId accountId FK "ref: Account, indexed"
+        String type "enum: DEBIT, CREDIT"
+        Number amount "positive integer in minor units (cents)"
+        String description "audit memo"
+        Date createdAt "timestamp (append-only, no updatedAt)"
+    }
+
+    Blacklist {
+        ObjectId _id PK
+        String token UK "raw JWT string, unique, indexed"
+        Date expiresAt "TTL index (expireAfterSeconds: 0)"
+        Date createdAt "timestamp"
+    }

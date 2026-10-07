@@ -1,0 +1,55 @@
+flowchart TD
+    Start(["User Lands on Banking App"]) --> LandingPage["1. Public Landing Page (/)<br/>- Hero Banner & Trust Indicators<br/>- Security Architecture Overview<br/>- Real-time Currency Ticker Preview"]
+
+    LandingPage -->|New Customer| RegFlow["2. Register (/register)<br/>- Enter Name, Email & Password<br/>- Live Password Strength Indicator"]
+    LandingPage -->|Existing Customer| LoginFlow["3. Login (/login)<br/>- Enter Email & Password<br/>- Inline Client Validation"]
+
+    RegFlow --> SubmitReg["Submit Registration<br/>POST /api/v1/auth/register"]
+    SubmitReg --> AutoProvision["Backend Auto-provisions 10-digit Savings Account<br/>Status: ACTIVE, Currency: USD"]
+    AutoProvision --> SetAuthSession["Set HTTP-only Cookie + Update AuthContext"]
+    
+    LoginFlow --> SubmitLogin["Submit Login<br/>POST /api/v1/auth/login"]
+    SubmitLogin --> SetAuthSession
+
+    SetAuthSession --> Dashboard["4. Dashboard (/dashboard)<br/>- Fetch Accounts: GET /accounts/me<br/>- Derive Live Balance: GET /accounts/:id/balance<br/>- Fetch Recent Tx: GET /transactions/history"]
+
+    subgraph CoreActions["Dashboard Quick Actions & Navigation"]
+        Dashboard --> ActionDeposit["Action: Deposit via Sandbox Faucet"]
+        Dashboard --> ActionNewAccount["Action: Open Secondary Account"]
+        Dashboard --> ActionTransfer["Action: Send Money"]
+        Dashboard --> ActionHistory["Action: View Statements"]
+        Dashboard --> ActionProfile["Action: View Profile & Security"]
+    end
+
+    ActionDeposit --> FaucetModal["Faucet Deposit Modal<br/>- Select Account<br/>- Choose $50, $100, $500 chips<br/>- POST /accounts/:id/deposit"]
+    FaucetModal --> UpdateBalance1["Backend records CREDIT in Ledger<br/>Live Balance updated ($Credits - $Debits)"]
+    UpdateBalance1 --> Dashboard
+
+    ActionNewAccount --> NewAccModal["Open Account Modal<br/>- Select CHECKING<br/>- POST /accounts"]
+    NewAccModal --> RenderAccList["Account list refreshed in BankingContext"]
+    RenderAccList --> Dashboard
+
+    ActionTransfer --> TransferPage["5. Transfer Workflow (/transfer)<br/>- Select Source Account<br/>- Select Internal/External Recipient<br/>- Enter Amount ($) -> Converted to Cents<br/>- Live Balance Check (Disable if > Balance)"]
+    TransferPage --> ReviewModal["6. Two-Step Confirmation Modal<br/>- Summary: From, To, Fee ($0.00), Net Debit<br/>- Generates RFC 4122 UUID v4 Idempotency Key"]
+    ReviewModal --> ExecuteTransfer["7. Confirm & Send<br/>- Button Locked + Spinner rendered<br/>- Header: Idempotency-Key<br/>- POST /transactions/transfer"]
+    ExecuteTransfer --> ACIDCommit["Backend multi-document ACID execution:<br/>- Sender balance verified in session<br/>- Writes DEBIT & CREDIT ledger entries<br/>- Commits MongoDB session"]
+    ACIDCommit --> TxReceipt["8. Transaction Receipt Modal<br/>- Displays Tx ID, Status: COMPLETED<br/>- Live sender balance updated"]
+    TxReceipt --> Dashboard
+
+    ActionHistory --> TxPage["9. Transactions Journal (/transactions)<br/>- Paginated Table (page, limit)<br/>- Filter by status (ALL, COMPLETED, PENDING, FAILED)<br/>- Click row -> Single Tx Receipt Modal"]
+
+    ActionProfile --> ProfilePage["10. Profile & Security (/profile)<br/>- Credentials, Verification Badge<br/>- Click 'Logout & Revoke Session'"]
+    ProfilePage --> LogoutAction["POST /api/v1/auth/logout<br/>- Writes token to MongoDB Blacklist TTL<br/>- Clears HTTP-only cookie<br/>- Wipes AuthContext"]
+    LogoutAction --> RedirectLogin["Redirect to /login<br/>(Old token cannot be reused)"]
+
+    classDef public fill:#0369a1,stroke:#0284c7,stroke-width:2px,color:#fff;
+    classDef auth fill:#4338ca,stroke:#6366f1,stroke-width:2px,color:#fff;
+    classDef dashboard fill:#065f46,stroke:#10b981,stroke-width:2px,color:#fff;
+    classDef transfer fill:#854d0e,stroke:#eab308,stroke-width:2px,color:#fff;
+    classDef finish fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#fff;
+
+    class Start,LandingPage public;
+    class RegFlow,LoginFlow,SubmitReg,SubmitLogin,SetAuthSession,AutoProvision auth;
+    class Dashboard,ActionDeposit,ActionNewAccount,ActionHistory,ActionProfile,FaucetModal,NewAccModal,UpdateBalance1,RenderAccList dashboard;
+    class TransferPage,ReviewModal,ExecuteTransfer,ACIDCommit,TxReceipt transfer;
+    class TxPage,ProfilePage,LogoutAction,RedirectLogin finish;

@@ -1,0 +1,37 @@
+flowchart TD
+    Start(["User Starts / App Opened"]) --> Register["1. Register User<br/>POST /api/v1/auth/register"]
+    Register --> AutoAcct["Auto-provision 10-digit Savings Account<br/>Account status: ACTIVE"]
+    AutoAcct --> WelcomeMail["Async: Send Welcome Email via Nodemailer"]
+    AutoAcct --> Login["2. Login<br/>POST /api/v1/auth/login"]
+    
+    Login --> IssueCookie["Verify bcrypt hash and Issue HTTP-Only JWT Cookie"]
+    IssueCookie --> AuthState["Authenticated Session Active"]
+
+    AuthState --> Faucet["3. Initial Deposit / Faucet<br/>POST /api/v1/accounts/:id/deposit"]
+    Faucet --> WriteDepositLedger["Record CREDIT in Ledger<br/>Money enters system"]
+    WriteDepositLedger --> CheckBal1["4. Check Initial Balance<br/>GET /api/v1/accounts/:id/balance"]
+    CheckBal1 --> DeriveBal1["Aggregate Ledger: Credits minus Debits"]
+
+    DeriveBal1 --> Transfer["5. Transfer Money<br/>POST /api/v1/transactions<br/>Header: Idempotency-Key"]
+    
+    Transfer --> TxPipeline["Execute ACID Transaction in Mongo Session:<br/>• Check Idempotency<br/>• Verify Account Statuses<br/>• Aggregate Sender Balance<br/>• Create PENDING Transaction<br/>• Write DEBIT and CREDIT in Ledger<br/>• Update COMPLETED<br/>• Commit Session"]
+
+    TxPipeline --> TxAlerts["Async: Send Debit Alert to Sender<br/>and Credit Alert to Receiver"]
+    TxAlerts --> CheckBal2["6. Check Updated Balances<br/>Sender balance reduced, Receiver balance increased"]
+
+    CheckBal2 --> History["7. View Transaction History<br/>GET /api/v1/transactions/history"]
+    
+    History --> Logout["8. Logout<br/>POST /api/v1/auth/logout"]
+    Logout --> BlacklistSave["Store JWT in Blacklist with Mongo TTL Index"]
+    BlacklistSave --> ClearCookie["Clear HTTP-Only Cookie"]
+    ClearCookie --> EndState(["Logged Out - Old Token Revoked"])
+
+    classDef primary fill:#2563eb,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef action fill:#059669,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef security fill:#d97706,stroke:#b45309,stroke-width:2px,color:#fff;
+    classDef finish fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff;
+
+    class Start,AuthState primary;
+    class Register,AutoAcct,Login,Faucet,Transfer,History action;
+    class IssueCookie,TxPipeline,BlacklistSave security;
+    class EndState finish;

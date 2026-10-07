@@ -1,0 +1,41 @@
+flowchart TD
+    subgraph Transaction_Event ["Transfer Event: USD 50.00 (5,000 cents) from Account A to Account B"]
+        direction LR
+        Tx["Transaction: tx_98124<br/>Amount: 5,000 cents"]
+    end
+
+    subgraph Ledger_Journal ["Append-Only Ledger Collection (Immutable)"]
+        direction TB
+        E1["Ledger Entry #1<br/>accountId: Account A<br/>type: DEBIT<br/>amount: 5,000<br/>txId: tx_98124"]
+        E2["Ledger Entry #2<br/>accountId: Account B<br/>type: CREDIT<br/>amount: 5,000<br/>txId: tx_98124"]
+    end
+
+    subgraph Mathematical_Proof ["Zero-Sum Conservation Rule"]
+        Proof["Sum of Debits (5,000) = Sum of Credits (5,000)<br/>Net System Balance Delta = USD 0.00"]
+    end
+
+    subgraph Aggregation_Pipeline ["MongoDB Aggregation Pipeline: getAccountBalance(AccountId)"]
+        direction TB
+        Stage1["Stage 1: Match Filter<br/>account equals Account A"]
+        Stage2["Stage 2: Group Aggregator<br/>Calculate totalCredits and totalDebits"]
+        Stage3["Stage 3: Project Result<br/>balance equals totalCredits minus totalDebits"]
+        Stage1 --> Stage2 --> Stage3
+    end
+
+    subgraph RealTime_Result ["Derived Account A Balance"]
+        Result["Available Balance = totalCredits minus totalDebits<br/>(e.g., 50,000 minus 5,000 = 45,000 cents / USD 450.00)"]
+    end
+
+    Tx --> E1
+    Tx --> E2
+    E1 & E2 --- Mathematical_Proof
+    E1 --> Stage1
+    Stage3 --> Result
+
+    classDef ledger fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef math fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+    classDef agg fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#15803d;
+
+    class E1,E2 ledger;
+    class Proof math;
+    class Stage1,Stage2,Stage3,Result agg;

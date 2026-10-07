@@ -1,0 +1,105 @@
+graph TB
+    subgraph Client_Layer ["Client Layer"]
+        Postman["Postman API Client / Web Frontend"]
+    end
+
+    subgraph Security_Perimeter ["Security & Network Perimeter"]
+        CORS["CORS Middleware"]
+        CookieParser["Cookie Parser Middleware"]
+        JSONParser["Express JSON / URL-Encoded Parser"]
+    end
+
+    subgraph API_Gateway ["API Gateway & Routing Layer"]
+        Router["Express Router"]
+        AuthRoutes["/api/v1/auth"]
+        AccountRoutes["/api/v1/accounts"]
+        TxRoutes["/api/v1/transactions"]
+        HealthRoute["/health"]
+    end
+
+    subgraph Middleware_Guards ["Middleware Guards"]
+        AuthMiddleware["authMiddleware (JWT & Blacklist)"]
+        ValidationMiddleware["validateMiddleware"]
+        ErrorMiddleware["errorMiddleware (Global Boundary)"]
+    end
+
+    subgraph Controller_Layer ["Controller Layer"]
+        AuthCtrl["auth.controller.js"]
+        AccountCtrl["account.controller.js"]
+        TxCtrl["transaction.controller.js"]
+    end
+
+    subgraph Service_Layer ["Domain Service Layer"]
+        LedgerService["ledger.service.js (Aggregation)"]
+        EmailService["email.service.js (Async Worker)"]
+    end
+
+    subgraph Persistence_Layer ["Persistence Layer (Mongoose Models)"]
+        UserModel["User Model"]
+        AccountModel["Account Model"]
+        TxModel["Transaction Model"]
+        LedgerModel["Ledger Model (Append-Only)"]
+        BlacklistModel["Blacklist Model (TTL Index)"]
+    end
+
+    subgraph External_Infrastructure ["External Infrastructure"]
+        AtlasCluster[("MongoDB Atlas Replica Set")]
+        SMTPServer["SMTP Mail Server (Nodemailer)"]
+    end
+
+    Postman -->|HTTPS Requests & Cookies| Security_Perimeter
+    Security_Perimeter --> Router
+
+    Router --> AuthRoutes
+    Router --> AccountRoutes
+    Router --> TxRoutes
+    Router --> HealthRoute
+
+    AuthRoutes --> AuthMiddleware
+    AccountRoutes --> AuthMiddleware
+    TxRoutes --> AuthMiddleware
+    TxRoutes --> ValidationMiddleware
+
+    AuthMiddleware --> AuthCtrl
+    AuthMiddleware --> AccountCtrl
+    AuthMiddleware --> TxCtrl
+    ValidationMiddleware --> TxCtrl
+
+    AuthCtrl --> UserModel
+    AuthCtrl --> AccountModel
+    AuthCtrl --> BlacklistModel
+    AuthCtrl -.->|Async Fire-and-Forget| EmailService
+
+    AccountCtrl --> AccountModel
+    AccountCtrl --> LedgerService
+
+    TxCtrl --> TxModel
+    TxCtrl --> LedgerModel
+    TxCtrl --> LedgerService
+    TxCtrl -.->|Async Fire-and-Forget| EmailService
+
+    LedgerService --> LedgerModel
+    LedgerService --> AccountModel
+    
+    UserModel --> AtlasCluster
+    AccountModel --> AtlasCluster
+    TxModel --> AtlasCluster
+    LedgerModel --> AtlasCluster
+    BlacklistModel --> AtlasCluster
+
+    EmailService --> SMTPServer
+
+    AuthCtrl -.->|Unhandled Errors| ErrorMiddleware
+    AccountCtrl -.->|Unhandled Errors| ErrorMiddleware
+    TxCtrl -.->|Unhandled Errors| ErrorMiddleware
+    ErrorMiddleware -->|JSON Error Envelope| Postman
+
+    classDef primary fill:#2563eb,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef database fill:#059669,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef security fill:#d97706,stroke:#b45309,stroke-width:2px,color:#fff;
+    classDef external fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#fff;
+
+    class Postman primary;
+    class AtlasCluster database;
+    class AuthMiddleware,BlacklistModel security;
+    class SMTPServer external;

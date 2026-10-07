@@ -1,0 +1,48 @@
+graph LR
+    subgraph Client_Network ["External Internet"]
+        WebClients["Browser / Mobile Apps"]
+        PostmanClient["Postman Automated Test Suite"]
+    end
+
+    subgraph Host_Server ["Production Server Environment (Node.js v20+)"]
+        direction TB
+        Nginx["Reverse Proxy / TLS Termination (Port 443 HTTPS)"]
+        
+        subgraph Process_Cluster ["Application Process Layer"]
+            AppInstance["Express.js Server (Port 3000)<br/>PM2 / Docker Managed"]
+            DNSConfig["Node.js DNS Resolver<br/>dns.setServers(['8.8.8.8', '8.8.4.4'])"]
+            EnvConfig["dotenv (.env)<br/>PORT, MONGO_URI, JWT_SECRET, SMTP_*"]
+        end
+    end
+
+    subgraph MongoDB_Cloud ["MongoDB Atlas Cloud (AWS / GCP)"]
+        direction TB
+        PrimaryNode[("Primary Node (Read/Write)")]
+        Secondary1[("Secondary Replica 1")]
+        Secondary2[("Secondary Replica 2")]
+        
+        PrimaryNode <-->|Replication Oplog| Secondary1
+        PrimaryNode <-->|Replication Oplog| Secondary2
+    end
+
+    subgraph SMTP_Cloud ["Email Service Provider"]
+        MailServer["SMTP Gateway (TLS Port 587/465)<br/>Gmail / SendGrid / Mailtrap"]
+    end
+
+    WebClients & PostmanClient -->|HTTPS + Encrypted Cookies| Nginx
+    Nginx -->|Reverse Proxy HTTP:3000| AppInstance
+    
+    AppInstance -.-> DNSConfig
+    AppInstance -.-> EnvConfig
+    
+    DNSConfig -->|Resolves SRV Records| AppInstance
+    AppInstance -->|TLS MongoDB Wire Protocol (Port 27017)| PrimaryNode
+    AppInstance -->|SMTP Protocols| MailServer
+
+    classDef server fill:#f8fafc,stroke:#475569,stroke-width:2px;
+    classDef db fill:#ecfdf5,stroke:#059669,stroke-width:2px;
+    classDef mail fill:#faf5ff,stroke:#7c3aed,stroke-width:2px;
+
+    class Host_Server server;
+    class MongoDB_Cloud db;
+    class SMTP_Cloud mail;

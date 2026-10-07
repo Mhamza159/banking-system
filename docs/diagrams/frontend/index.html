@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banking Frontend React — 8 Architecture & Flow Diagrams</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #10b981;
+      --indigo: #6366f1;
+      --border: #1f2937;
+      --tab-active: #047857;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .badge {
+      background: #065f46;
+      color: #a7f3d0;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .container {
+      display: flex;
+      min-height: calc(100vh - 75px);
+    }
+    nav {
+      width: 340px;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border);
+      padding: 1.25rem 0.75rem;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .nav-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+      font-weight: 700;
+    }
+    .tab-btn {
+      width: 100%;
+      text-align: left;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: all 0.15s;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+    .tab-btn.active {
+      background: var(--tab-active);
+      color: #fff;
+      font-weight: 600;
+    }
+    main {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      position: relative;
+    }
+    .diagram-panel {
+      display: none;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .diagram-panel.active {
+      display: block;
+    }
+    .diagram-header {
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+    .diagram-title {
+      font-size: 1.3rem;
+      margin: 0 0 0.5rem 0;
+      color: var(--accent);
+    }
+    .diagram-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .mermaid-box {
+      background: #070a12;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      overflow-x: auto;
+      text-align: center;
+      min-height: 250px;
+    }
+    .mermaid-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Banking Frontend React — 8 Architectural Diagrams</h1>
+      <small style="color: var(--text-muted)">Fintech-Grade React + Vite Client Architecture</small>
+    </div>
+    <span class="badge">8 / 8 Verified</span>
+  </header>
+
+  <div class="container">
+    <nav>
+      <div class="nav-title">Frontend Architecture Diagrams</div>
+      <button class="tab-btn active" onclick="showTab(1)">1. Frontend Architecture</button>
+      <button class="tab-btn" onclick="showTab(2)">2. Application Flow</button>
+      <button class="tab-btn" onclick="showTab(3)">3. Component Architecture</button>
+      <button class="tab-btn" onclick="showTab(4)">4. Authentication Flow</button>
+      <button class="tab-btn" onclick="showTab(5)">5. Transaction & Idempotency</button>
+      <button class="tab-btn" onclick="showTab(6)">6. API Integration & Errors</button>
+      <button class="tab-btn" onclick="showTab(7)">7. State Management Flow</button>
+      <button class="tab-btn" onclick="showTab(8)">8. Responsive Layout Flow</button>
+    </nav>
+
+    <main>
+      <!-- Diagram 1 -->
+      <div id="panel-1" class="diagram-panel active">
+        <div class="diagram-header">
+          <h2 class="diagram-title">1. Frontend Architecture Diagram</h2>
+          <p class="diagram-desc">Poore frontend client ka high-level multi-layered structure: Viewport layer se le kar Routing, Layouts, Pages, Context State, Axios client, aur backend transport boundary tak.</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+flowchart TB
+    subgraph Client["Client Browser (React 18 SPA + Vite)"]
+        subgraph Viewport["Responsive Viewport Layer"]
+            Desktop["Desktop View (>= 1024px)"]
+            Mobile["Mobile / Tablet (< 1024px)"]
+        end
+
+        subgraph Routing["Routing & Security Guards (React Router v6)"]
+            Router["AppRoutes"]
+            PublicRoute["Public Routes (Landing /)"]
+            GuestRoute["GuestGuard (/login, /register)"]
+            AuthRoute["AuthGuard (/dashboard, /accounts, /transfer, /tx)"]
+        end
+
+        subgraph Layouts["Layout Architecture"]
+            AppShell["AppLayout (Root + ToastContainer)"]
+            AuthLayout["AuthLayout (Split Branded Panel)"]
+            DashLayout["DashboardLayout (Sidebar + Header + Main)"]
+        end
+
+        subgraph Pages["Application Pages"]
+            Landing["LandingPage"]
+            Login["LoginPage"]
+            Register["RegisterPage"]
+            Dashboard["DashboardPage"]
+            Accounts["AccountsPage"]
+            Transfer["TransferPage"]
+            Transactions["TransactionsPage"]
+            Profile["ProfilePage"]
+        end
+
+        subgraph StateLayer["State Management Architecture"]
+            AuthCtx["AuthContext (User, Session, Logout)"]
+            BankCtx["BankingContext (Accounts, Active Account, Sync)"]
+            ToastCtx["ToastContext (Global Notifications)"]
+            LocalState["Component State (Forms, Modals, Filters)"]
+        end
+
+        subgraph Primitives["Reusable Design System Primitives"]
+            Buttons["Button (Variants + Loading)"]
+            Inputs["Input & Select (Validation)"]
+            Modals["Modal (Focus Trap + Backdrop)"]
+            Cards["Card (Glassmorphic Surface)"]
+            Badges["Badge (Status Colors)"]
+            Money["MoneyDisplay (Cents Formatter)"]
+            Skeletons["Skeleton (Shimmer Loaders)"]
+        end
+
+        subgraph APILayer["API Integration Layer"]
+            AxiosClient["Central Axios Client (withCredentials: true)"]
+            AuthService["authService"]
+            AccountService["accountService"]
+            TxService["transactionService"]
+            InterceptorReq["Request Interceptor (Idempotency-Key)"]
+            InterceptorRes["Response Interceptor (ApiError & 401 Handler)"]
+        end
+    end
+
+    subgraph SecurityBoundary["Transport & Security Protocols"]
+        CookieSec["HTTP-Only Cookie (token)"]
+        IdempHeader["Header: Idempotency-Key (UUID v4)"]
+        CORSSec["CORS with Credentials (Origin Mirrored)"]
+    end
+
+    subgraph BackendSystem["Banking Backend Infrastructure (:3000)"]
+        ExpressApp["Express.js Server (src/app.js)"]
+        AuthMiddleware["authMiddleware (Cookie/Bearer + Blacklist)"]
+        FeatureControllers["Auth, Account & Tx Controllers"]
+        MongoAtlas[("MongoDB Atlas Replica Set\n- Users, Accounts\n- Append-Only Ledger\n- Transactions (ACID)\n- Blacklist (TTL Index)")]
+    end
+
+    Viewport --> Routing
+    Routing --> Layouts
+    Layouts --> Pages
+    Pages --> Primitives
+    Pages --> StateLayer
+    StateLayer --> APILayer
+    APILayer --> AxiosClient
+    AxiosClient --> InterceptorReq
+    AxiosClient --> InterceptorRes
+    InterceptorReq --> SecurityBoundary
+    SecurityBoundary --> BackendSystem
+    BackendSystem --> MongoAtlas
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagram 2 -->
+      <div id="panel-2" class="diagram-panel">
+        <div class="diagram-header">
+          <h2 class="diagram-title">2. Application / User Flow Diagram</h2>
+          <p class="diagram-desc">User ka mukammal safar: Landing page se Registration (auto 10-digit savings account), Login, Dashboard balance dekhna, Faucet deposit, 2-step money transfer, statement filtering, aur secure logout tak.</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+flowchart TD
+    Start(["User Lands on Banking App"]) --> LandingPage["1. Public Landing Page (/)<br/>- Hero Banner & Trust Indicators<br/>- Security Architecture Overview<br/>- Real-time Currency Ticker Preview"]
+
+    LandingPage -->|New Customer| RegFlow["2. Register (/register)<br/>- Enter Name, Email & Password<br/>- Live Password Strength Indicator"]
+    LandingPage -->|Existing Customer| LoginFlow["3. Login (/login)<br/>- Enter Email & Password<br/>- Inline Client Validation"]
+
+    RegFlow --> SubmitReg["Submit Registration<br/>POST /api/v1/auth/register"]
+    SubmitReg --> AutoProvision["Backend Auto-provisions 10-digit Savings Account<br/>Status: ACTIVE, Currency: USD"]
+    AutoProvision --> SetAuthSession["Set HTTP-only Cookie + Update AuthContext"]
+    
+    LoginFlow --> SubmitLogin["Submit Login<br/>POST /api/v1/auth/login"]
+    SubmitLogin --> SetAuthSession
+
+    SetAuthSession --> Dashboard["4. Dashboard (/dashboard)<br/>- Fetch Accounts: GET /accounts/me<br/>- Derive Live Balance: GET /accounts/:id/balance<br/>- Fetch Recent Tx: GET /transactions/history"]
+
+    subgraph CoreActions["Dashboard Quick Actions & Navigation"]
+        Dashboard --> ActionDeposit["Action: Deposit via Sandbox Faucet"]
+        Dashboard --> ActionNewAccount["Action: Open Secondary Account"]
+        Dashboard --> ActionTransfer["Action: Send Money"]
+        Dashboard --> ActionHistory["Action: View Statements"]
+        Dashboard --> ActionProfile["Action: View Profile & Security"]
+    end
+
+    ActionDeposit --> FaucetModal["Faucet Deposit Modal<br/>- Select Account<br/>- Choose $50, $100, $500 chips<br/>- POST /accounts/:id/deposit"]
+    FaucetModal --> UpdateBalance1["Backend records CREDIT in Ledger<br/>Live Balance updated ($Credits - $Debits)"]
+    UpdateBalance1 --> Dashboard
+
+    ActionNewAccount --> NewAccModal["Open Account Modal<br/>- Select CHECKING<br/>- POST /accounts"]
+    NewAccModal --> RenderAccList["Account list refreshed in BankingContext"]
+    RenderAccList --> Dashboard
+
+    ActionTransfer --> TransferPage["5. Transfer Workflow (/transfer)<br/>- Select Source Account<br/>- Select Internal/External Recipient<br/>- Enter Amount ($) -> Converted to Cents<br/>- Live Balance Check (Disable if > Balance)"]
+    TransferPage --> ReviewModal["6. Two-Step Confirmation Modal<br/>- Summary: From, To, Fee ($0.00), Net Debit<br/>- Generates RFC 4122 UUID v4 Idempotency Key"]
+    ReviewModal --> ExecuteTransfer["7. Confirm & Send<br/>- Button Locked + Spinner rendered<br/>- Header: Idempotency-Key<br/>- POST /transactions/transfer"]
+    ExecuteTransfer --> ACIDCommit["Backend multi-document ACID execution:<br/>- Sender balance verified in session<br/>- Writes DEBIT & CREDIT ledger entries<br/>- Commits MongoDB session"]
+    ACIDCommit --> TxReceipt["8. Transaction Receipt Modal<br/>- Displays Tx ID, Status: COMPLETED<br/>- Live sender balance updated"]
+    TxReceipt --> Dashboard
+
+    ActionHistory --> TxPage["9. Transactions Journal (/transactions)<br/>- Paginated Table (page, limit)<br/>- Filter by status (ALL, COMPLETED, PENDING, FAILED)<br/>- Click row -> Single Tx Receipt Modal"]
+
+    ActionProfile --> ProfilePage["10. Profile & Security (/profile)<br/>- Credentials, Verification Badge<br/>- Click 'Logout & Revoke Session'"]
+    ProfilePage --> LogoutAction["POST /api/v1/auth/logout<br/>- Writes token to MongoDB Blacklist TTL<br/>- Clears HTTP-only cookie<br/>- Wipes AuthContext"]
+    LogoutAction --> RedirectLogin["Redirect to /login<br/>(Old token cannot be reused)"]
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagram 3 -->
+      <div id="panel-3" class="diagram-panel">
+        <div class="diagram-header">
+          <h2 class="diagram-title">3. Component Architecture Diagram</h2>
+          <p class="diagram-desc">Modular component tree: Layouts, Guard wrappers, Domain banking components (BalanceCard, TransferModal, TransactionTable) aur Common design system primitives (Button, Modal, Input, Badge, MoneyDisplay).</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+flowchart TD
+    App["App.jsx (Root Entry)"] --> ToastProv["ToastProvider (ToastContext)"]
+    ToastProv --> AuthProv["AuthProvider (AuthContext)"]
+    AuthProv --> BankProv["BankingProvider (BankingContext)"]
+    BankProv --> AppRoutes["AppRoutes.jsx (React Router)"]
+
+    AppRoutes --> PublicViews["Public Route Layer"]
+    AppRoutes --> GuestViews["Guest-Only Guard Layer"]
+    AppRoutes --> ProtectedViews["Protected Guard Layer"]
+
+    subgraph PublicViewsGroup["Public Views"]
+        PublicViews --> LandingPage["LandingPage.jsx"]
+        LandingPage --> HeroSec["HeroSection.jsx"]
+        LandingPage --> FeatureGrid["FeatureGrid.jsx"]
+        LandingPage --> SecurityStats["SecurityStats.jsx"]
+        LandingPage --> CurrencyTicker["CurrencyTicker.jsx"]
+        LandingPage --> Footer["Footer.jsx"]
+    end
+
+    subgraph GuestViewsGroup["Guest Views (Unauthenticated)"]
+        GuestViews --> AuthLayout["AuthLayout.jsx (Branded Split Screen)"]
+        AuthLayout --> LoginPage["LoginPage.jsx"]
+        AuthLayout --> RegisterPage["RegisterPage.jsx"]
+        LoginPage --> PasswordInput["Input.jsx (with Show/Hide)"]
+        RegisterPage --> PasswordStrength["PasswordStrengthMeter.jsx"]
+    end
+
+    subgraph ProtectedViewsGroup["Protected Views (Authenticated Shell)"]
+        ProtectedViews --> DashboardLayout["DashboardLayout.jsx"]
+        
+        DashboardLayout --> Sidebar["Sidebar.jsx (Desktop Navigation)"]
+        DashboardLayout --> MobileNav["MobileNav.jsx (Slide-over Drawer)"]
+        DashboardLayout --> Header["Header.jsx (Active Account, Avatar, Logout)"]
+        DashboardLayout --> PageContent["Page Content Viewport"]
+
+        PageContent --> DashboardPage["DashboardPage.jsx"]
+        PageContent --> AccountsPage["AccountsPage.jsx"]
+        PageContent --> TransferPage["TransferPage.jsx"]
+        PageContent --> TransactionsPage["TransactionsPage.jsx"]
+        PageContent --> ProfilePage["ProfilePage.jsx"]
+    end
+
+    subgraph DashboardComponents["Dashboard Domain Components"]
+        DashboardPage --> BalanceCard["BalanceCard.jsx (Gradient + Quick Actions)"]
+        DashboardPage --> LedgerSummary["LedgerSummaryCard.jsx (Inflow vs Outflow)"]
+        DashboardPage --> AccountCarousel["AccountCarousel.jsx (Savings / Checking)"]
+        DashboardPage --> RecentTxFeed["RecentTransactions.jsx (Activity Feed)"]
+    end
+
+    subgraph AccountsComponents["Accounts Domain Components"]
+        AccountsPage --> AccountCard["AccountCard.jsx (10-Digit Copy + Status)"]
+        AccountsPage --> CreateAccountModal["CreateAccountModal.jsx (Open Checking)"]
+        AccountsPage --> FaucetDepositModal["FaucetDepositModal.jsx (Deposit Presets)"]
+    end
+
+    subgraph TransferComponents["Transfer Domain Components"]
+        TransferPage --> TransferForm["TransferForm.jsx (Balance Validation)"]
+        TransferPage --> TransferModal["TransferModal.jsx (Two-Step Review)"]
+        TransferPage --> TransactionReceipt["TransactionReceipt.jsx (Print/Copy Receipt)"]
+    end
+
+    subgraph TransactionsComponents["Transactions Domain Components"]
+        TransactionsPage --> TransactionFilters["TransactionFilters.jsx (Status Tabs + Search)"]
+        TransactionsPage --> TransactionTable["TransactionTable.jsx (Sortable Columns)"]
+        TransactionTable --> TransactionRow["TransactionRow.jsx (Credit/Debit Badges)"]
+        TransactionsPage --> Pagination["Pagination.jsx (Page Jump & Limit)"]
+    end
+
+    subgraph CommonPrimitives["Shared UI Primitives (Design System)"]
+        Button["Button.jsx"]
+        Input["Input.jsx"]
+        Select["Select.jsx"]
+        Modal["Modal.jsx"]
+        Card["Card.jsx"]
+        Badge["Badge.jsx"]
+        Skeleton["Skeleton.jsx"]
+        MoneyDisplay["MoneyDisplay.jsx"]
+        Toast["Toast.jsx"]
+        EmptyState["EmptyState.jsx"]
+    end
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagram 4 -->
+      <div id="panel-4" class="diagram-panel">
+        <div class="diagram-header">
+          <h2 class="diagram-title">4. Authentication & Session Lifecycle Sequence</h2>
+          <p class="diagram-desc">Registration, Login, Page refresh par /auth/me se session hydration, aur Logout par MongoDB TTL Blacklist se token revocation aur cookie clearing ka sequence.</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as React UI (Login/Register)
+    participant AuthCtx as AuthContext
+    participant Axios as Axios API Client
+    participant Server as Express Server (:3000)
+    participant DB as MongoDB Atlas
+
+    Note over User,DB: SCENARIO 1: Registration & Instant Account Provisioning
+    User->>UI: Fills name, email, password & submits
+    UI->>Axios: POST /api/v1/auth/register
+    Axios->>Server: HTTP POST (withCredentials: true)
+    Server->>DB: Hash password (bcrypt 10 rounds) & create User
+    Server->>DB: Auto-provision 10-digit Savings Account
+    Server-->>Axios: 201 Created + Set-Cookie: token=&lt;jwt&gt;; HttpOnly; SameSite=Strict
+    Axios-->>AuthCtx: { user, account, token }
+    AuthCtx-->>UI: Sets isAuthenticated: true, user: user
+    UI->>User: Redirects to /dashboard (Welcome toast displayed)
+
+    Note over User,DB: SCENARIO 2: Page Refresh & Session Hydration
+    User->>UI: Hard Refresh Browser (F5)
+    UI->>AuthCtx: Mounts -> Checks initial state (isLoading: true)
+    AuthCtx->>Axios: GET /api/v1/auth/me
+    Axios->>Server: HTTP GET with Cookie: token=&lt;jwt&gt;
+    Server->>DB: Check token against Blacklist collection
+    alt Token is Revoked
+        Server-->>Axios: 401 Unauthorized ("Token has been revoked")
+        Axios-->>AuthCtx: Error: Session Expired
+        AuthCtx-->>UI: Reset user state -> Redirect to /login
+    else Token is Valid
+        Server->>DB: Find user by decoded token ID
+        Server-->>Axios: 200 OK { user: userProfile }
+        Axios-->>AuthCtx: Sets user state (isLoading: false, isAuthenticated: true)
+        AuthCtx-->>UI: Restores protected Dashboard view
+    end
+
+    Note over User,DB: SCENARIO 3: Secure Logout & Blacklist TTL Revocation
+    User->>UI: Clicks "Logout & Revoke Session"
+    UI->>AuthCtx: logout()
+    AuthCtx->>Axios: POST /api/v1/auth/logout
+    Axios->>Server: HTTP POST with Cookie: token=&lt;jwt&gt;
+    Server->>DB: Insert token into Blacklist collection (expiresAt: decoded.exp)
+    Server-->>Axios: Set-Cookie: token=none; Max-Age=0 + 200 OK
+    Axios-->>AuthCtx: Success
+    AuthCtx-->>UI: Wipes user & session state
+    UI->>User: Redirects to /login (Toast: "Logged out successfully")
+
+    Note over User,DB: SCENARIO 4: Revoked Token Replay Protection
+    User->>UI: Attempt accessing /api/v1/auth/me with old revoked token
+    UI->>Axios: GET /api/v1/auth/me
+    Axios->>Server: HTTP GET with old token
+    Server->>DB: Blacklist.findOne({ token }) -> Match Found!
+    Server-->>Axios: 401 Unauthorized ("Token has been revoked")
+    Axios-->>UI: Interceptor catches 401 -> Forces redirect to /login
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagram 5 -->
+      <div id="panel-5" class="diagram-panel">
+        <div class="diagram-header">
+          <h2 class="diagram-title">5. Transaction Flow & Idempotency Engine</h2>
+          <p class="diagram-desc">Fund transfer ka safar: Client-side balance check, 2-step review modal, RFC 4122 UUID v4 Idempotency Key generation, double-click locking, backend ACID transaction commit, aur instant receipt display.</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User
+    participant Form as TransferForm.jsx
+    participant Modal as TransferModal.jsx (Review)
+    participant BankCtx as BankingContext
+    participant Axios as Axios API Client
+    participant Server as Express Server (:3000)
+    participant MongoSession as MongoDB ACID Session
+
+    User->>Form: Selects source account, enters recipient & amount ($100.00)
+    Form->>Form: Checks client rules:<br/>- amount > 0<br/>- senderAccountId != receiverAccountId<br/>- availableBalance >= amountInCents (10,000)
+    alt Balance Insufficient
+        Form-->>User: Inline Error: "Insufficient funds. Available: $50.00, Required: $100.00"<br/>("Review Transfer" button disabled)
+    else Balance Sufficient
+        User->>Form: Clicks "Review Transfer"
+    end
+
+    Form->>Modal: Opens Confirmation Dialog with transfer details
+    Modal->>Modal: Generates RFC 4122 UUID v4 Idempotency Key:<br/>e.g. "idemp-uuid-7a91-4c28-98e1"
+    Modal->>User: Displays Transaction Summary:<br/>- Sender Account: 9178200360<br/>- Recipient Account: 6751823154<br/>- Amount: $100.00 (Fee: $0.00)<br/>- Net Deduction: $100.00
+
+    User->>Modal: Clicks "Confirm & Send Funds"
+    Modal->>Modal: Locks UI: isSubmitting = true (Disables button, renders spinner)<br/>Prevents accidental double-clicks
+
+    Modal->>Axios: POST /api/v1/transactions/transfer<br/>Header: Idempotency-Key: idemp-uuid-7a91-4c28-98e1<br/>Body: { senderAccountId, receiverAccountId, amountInCents: 10000, description }
+    Axios->>Server: HTTP POST (withCredentials: true)
+
+    Server->>Server: 1. Verify Idempotency Cache
+    Server->>Server: 2. Validate Accounts are ACTIVE & Not Frozen
+    Server->>MongoSession: 3. session.startTransaction()
+    MongoSession->>MongoSession: 4. Aggregate sender balance within session
+    MongoSession->>MongoSession: 5. Insert Transaction (status: PENDING)
+    MongoSession->>MongoSession: 6. Insert DEBIT entry in Ledger for Sender
+    MongoSession->>MongoSession: 7. Insert CREDIT entry in Ledger for Receiver
+    MongoSession->>MongoSession: 8. Update Transaction (status: COMPLETED)
+    MongoSession->>Server: 9. session.commitTransaction()
+
+    Server-->>Axios: 201 Created { transaction: { id, status: "COMPLETED", ... }, senderBalance: { balanceInCents: 40000 } }
+    Axios-->>Modal: Success Payload
+    Modal->>Modal: Closes review modal -> Opens TransactionReceipt.jsx
+    Modal->>BankCtx: refreshBalances() (Triggers re-sync of active accounts)
+    BankCtx-->>Form: Global balance updated to $400.00
+    Modal->>User: Displays Verified Receipt with Copyable Transaction ID
+
+    Note over User,Server: REPLAY SCENARIO: Network Retry with Identical Idempotency-Key
+    User->>Server: Re-submits POST with same Idempotency-Key
+    Server->>Server: Detects existing COMPLETED transaction in DB
+    Server-->>User: 200 OK (cached: true, returns original receipt without modifying ledger)
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagram 6 -->
+      <div id="panel-6" class="diagram-panel">
+        <div class="diagram-header">
+          <h2 class="diagram-title">6. API Integration & Error Interception Flow</h2>
+          <p class="diagram-desc">Axios request pipelines (cookies, headers, idempotency keys) aur response interceptors: 200 unwrapping, 400 inline errors, 401 session logout event, 403/404/409/500 notifications.</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+flowchart TD
+    ComponentReq(["UI Component calls Service Method<br/>(e.g. authService, accountService, transactionService)"]) --> AxiosInstance["Central Axios Client (src/services/api.js)"]
+
+    subgraph RequestPipeline["Axios Request Interceptor Pipeline"]
+        AxiosInstance --> SetBase["1. Set Base URL: http://localhost:3000/api/v1"]
+        SetBase --> SetCreds["2. Set withCredentials: true (Send HTTP-only cookies)"]
+        SetCreds --> SetHeaders["3. Set Content-Type: application/json"]
+        SetHeaders --> CheckIdemp{"Is Transfer Request?"}
+        CheckIdemp -->|Yes| AttachIdemp["Attach Header: Idempotency-Key: &lt;UUID v4&gt;"]
+        CheckIdemp -->|No| SendReq["Send HTTP Request"]
+        AttachIdemp --> SendReq
+    end
+
+    SendReq --> ExpressAPI["Express.js Server (:3000)"]
+    ExpressAPI --> MongoDB[("MongoDB Atlas")]
+    MongoDB --> ExpressAPI
+
+    ExpressAPI --> AxiosResponse["Axios Response Interceptor Pipeline"]
+
+    subgraph ResponsePipeline["Response Interceptor & Error Normalization"]
+        AxiosResponse --> StatusCheck{"HTTP Status Code?"}
+        
+        StatusCheck -->|200 / 201 Success| UnpackData["Unpack response.data<br/>Return { success: true, data: ... } directly to caller"]
+
+        StatusCheck -->|400 Bad Request| Err400["400 BAD_REQUEST / VALIDATION_ERROR<br/>Extract field error messages -> Render inline in form"]
+        StatusCheck -->|401 Unauthorized| Err401["401 UNAUTHORIZED / TOKEN_EXPIRED / REVOKED<br/>Emit 'banking:unauthorized' -> Reset AuthContext -> Redirect /login"]
+        StatusCheck -->|403 Forbidden| Err403["403 FORBIDDEN<br/>Trigger Toast: 'Access denied: You do not own this account'"]
+        StatusCheck -->|404 Not Found| Err404["404 NOT_FOUND<br/>Trigger Toast: 'Account or transaction resource not found'"]
+        StatusCheck -->|409 Conflict| Err409["409 CONFLICT<br/>Trigger Toast: 'Email already registered' or 'In-flight transaction conflict'"]
+        StatusCheck -->|500 / Network Error| Err500["500 INTERNAL_ERROR or Network Offline<br/>Mask technical trace -> Trigger Toast: 'Banking server temporarily unavailable'"]
+    end
+
+    UnpackData --> ResolvePromise(["Promise Resolved -> Component updates state & renders data"])
+    Err400 --> RejectPromise(["Promise Rejected -> Display user-friendly error banners"])
+    Err401 --> RejectPromise
+    Err403 --> RejectPromise
+    Err404 --> RejectPromise
+    Err409 --> RejectPromise
+    Err500 --> RejectPromise
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagram 7 -->
+      <div id="panel-7" class="diagram-panel">
+        <div class="diagram-header">
+          <h2 class="diagram-title">7. State Management & Data Synchronization Flow</h2>
+          <p class="diagram-desc">Global vs Local state separation: AuthContext (session), BankingContext (accounts & balances), ToastContext (alerts), aur reactive re-fetching jab deposit ya transfer execute hota hai.</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+flowchart TD
+    subgraph GlobalContexts["Global State Layer (React Context API)"]
+        subgraph AuthState["1. AuthContext"]
+            UserObj["user: { id, name, email, role }"]
+            AuthFlags["isAuthenticated: boolean<br/>isLoading: boolean"]
+            AuthMethods["Actions: login(), register(), logout(), checkSession()"]
+        end
+
+        subgraph BankingState["2. BankingContext"]
+            AccountList["accounts: Array of Account Documents"]
+            ActiveAccount["activeAccount: Selected Account (e.g. SAVINGS)"]
+            SyncTrigger["refreshBalances(): Triggers global re-fetch"]
+        end
+
+        subgraph ToastState["3. ToastContext"]
+            ToastList["toasts: Array of { id, type, message }"]
+            ToastMethods["Actions: showToast(type, msg), dismissToast(id)"]
+        end
+    end
+
+    subgraph ComponentConsumers["Component Viewport Consumers"]
+        HeaderComp["Header.jsx<br/>- User Name & Role<br/>- Active Account Selector<br/>- Logout Trigger"]
+        DashboardView["DashboardPage.jsx<br/>- BalanceCard (Listens to ActiveAccount)<br/>- RecentTransactions Feed"]
+        AccountsView["AccountsPage.jsx<br/>- Renders all accounts<br/>- Faucet Deposit Modal<br/>- Create Account Modal"]
+        TransferView["TransferPage.jsx<br/>- Source Account Selector<br/>- Transfer Confirmation Modal"]
+        TransactionsView["TransactionsPage.jsx<br/>- Paginated Transaction Table"]
+    end
+
+    subgraph LocalStateLayer["Local Component State (useState / useReducer)"]
+        FormState["Form Input State (Amount, Recipient, Description)"]
+        ModalState["Modal Visibility (isReviewOpen, isReceiptOpen, isFaucetOpen)"]
+        TableState["Table State (currentPage, filterStatus, searchQuery)"]
+        LoadingState["Action Loading (isSubmitting: boolean)"]
+    end
+
+    subgraph ReactiveSync["Reactive Financial Synchronization Cycle"]
+        DepositEvent["Faucet Deposit Completed<br/>POST /accounts/:id/deposit"] --> TriggerSync["Call BankingContext.refreshBalances()"]
+        TransferEvent["Money Transfer Completed<br/>POST /transactions/transfer"] --> TriggerSync
+        TriggerSync --> FetchMe["GET /accounts/me"]
+        TriggerSync --> FetchBal["GET /accounts/:id/balance"]
+        FetchMe --> UpdateAccList["Update BankingContext.accounts"]
+        FetchBal --> UpdateBal["Update BalanceCard & LedgerSummary"]
+    end
+
+    AuthState -.->|Provides User & Session| HeaderComp & DashboardView & AccountsView & TransferView
+    BankingState -.->|Provides Accounts & Balance| HeaderComp & DashboardView & AccountsView & TransferView
+    ToastState -.->|Renders Floating Alerts| HeaderComp & TransferView & AccountsView
+
+    TransferView --> LocalStateLayer
+    AccountsView --> LocalStateLayer
+    TransactionsView --> LocalStateLayer
+
+    DepositEvent -.-> ToastState
+    TransferEvent -.-> ToastState
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagram 8 -->
+      <div id="panel-8" class="diagram-panel">
+        <div class="diagram-header">
+          <h2 class="diagram-title">8. Responsive Layout & Viewport Adaptation</h2>
+          <p class="diagram-desc">Desktop (>= 1024px) aur Mobile (&lt; 1024px) viewports ke darmiyan responsive adaptation: Sidebar vs Slide-over Drawer, wide data table vs compact cards, aur touch-friendly tap targets.</p>
+        </div>
+        <div class="mermaid-box">
+          <div class="mermaid">
+flowchart TB
+    ViewportDetector["Browser Viewport Dimensions (window.innerWidth)"] --> LayoutBranch{"Viewport Breakpoint?"}
+
+    subgraph DesktopLayout["Desktop Viewport (>= 1024px) — High Data Density"]
+        LayoutBranch -->|">= 1024px"| DesktopShell["DashboardLayout (Desktop)"]
+        DesktopShell --> FixedSidebar["Fixed Desktop Sidebar (w-64)<br/>- Full logo, Nav links with active pill<br/>- Quick Account switcher<br/>- Logout button"]
+        DesktopShell --> DesktopHeader["Sticky Header<br/>- Live Search bar<br/>- Current active account dropdown<br/>- User avatar with status badge"]
+        DesktopShell --> DesktopMain["Main Grid Viewport<br/>- BalanceCard (Large horizontal layout with action pills)<br/>- 2-Column Ledger Summary & Quick Analytics<br/>- Comprehensive Multi-column Transaction Table"]
+        DesktopShell --> DesktopModals["Centered Modal Dialogs<br/>- Max width: max-w-lg with backdrop blur"]
+    end
+
+    subgraph MobileLayout["Mobile / Tablet Viewport (< 1024px) — Touch-Optimized"]
+        LayoutBranch -->|"< 1024px"| MobileShell["DashboardLayout (Mobile)"]
+        MobileShell --> MobileTopNav["Compact Mobile Topbar<br/>- Hamburger icon (toggles drawer)<br/>- Brand logo mark<br/>- Mini user avatar"]
+        MobileShell --> MobileDrawer["Off-Canvas MobileNav Drawer<br/>- Slides from left with transition<br/>- Dark semi-transparent overlay backdrop<br/>- Touch-friendly navigation links with 44px tap targets"]
+        MobileShell --> MobileMain["Mobile Content Area<br/>- BalanceCard (Stacked vertical layout)<br/>- Horizontal swipeable Account Carousel<br/>- Compact Transaction Cards with tap-to-inspect receipt"]
+        MobileShell --> MobileBottomSheets["Touch-Friendly Dialogs<br/>- Bottom-sheet presentation on small devices"]
+    end
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#070a12',
+        primaryColor: '#0f172a',
+        primaryBorderColor: '#38bdf8',
+        primaryTextColor: '#f8fafc',
+        lineColor: '#64748b'
+      }
+    });
+
+    function showTab(index) {
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index - 1);
+      });
+      document.querySelectorAll('.diagram-panel').forEach((panel, i) => {
+        panel.classList.toggle('active', i === index - 1);
+      });
+      window.dispatchEvent(new Event('resize'));
+    }
+  </script>
+</body>
+</html>

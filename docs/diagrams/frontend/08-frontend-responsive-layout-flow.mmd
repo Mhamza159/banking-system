@@ -1,0 +1,26 @@
+flowchart TB
+    ViewportDetector["Browser Viewport Dimensions (window.innerWidth)"] --> LayoutBranch{"Viewport Breakpoint?"}
+
+    subgraph DesktopLayout["Desktop Viewport (>= 1024px) — High Data Density"]
+        LayoutBranch -->|">= 1024px"| DesktopShell["DashboardLayout (Desktop)"]
+        DesktopShell --> FixedSidebar["Fixed Desktop Sidebar (w-64)<br/>- Full logo, Nav links with active pill<br/>- Quick Account switcher<br/>- Logout button"]
+        DesktopShell --> DesktopHeader["Sticky Header<br/>- Live Search bar<br/>- Current active account dropdown<br/>- User avatar with status badge"]
+        DesktopShell --> DesktopMain["Main Grid Viewport<br/>- BalanceCard (Large horizontal layout with action pills)<br/>- 2-Column Ledger Summary & Quick Analytics<br/>- Comprehensive Multi-column Transaction Table"]
+        DesktopShell --> DesktopModals["Centered Modal Dialogs<br/>- Max width: max-w-lg with backdrop blur"]
+    end
+
+    subgraph MobileLayout["Mobile / Tablet Viewport (< 1024px) — Touch-Optimized"]
+        LayoutBranch -->|"< 1024px"| MobileShell["DashboardLayout (Mobile)"]
+        MobileShell --> MobileTopNav["Compact Mobile Topbar<br/>- Hamburger icon (toggles drawer)<br/>- Brand logo mark<br/>- Mini user avatar"]
+        MobileShell --> MobileDrawer["Off-Canvas MobileNav Drawer<br/>- Slides from left with transition<br/>- Dark semi-transparent overlay backdrop<br/>- Touch-friendly navigation links with 44px tap targets"]
+        MobileShell --> MobileMain["Mobile Content Area<br/>- BalanceCard (Stacked vertical layout)<br/>- Horizontal swipeable Account Carousel<br/>- Compact Transaction Cards with tap-to-inspect receipt"]
+        MobileShell --> MobileBottomSheets["Touch-Friendly Dialogs<br/>- Bottom-sheet presentation on small devices"]
+    end
+
+    classDef detector fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef desktop fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef mobile fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+
+    class ViewportDetector,LayoutBranch detector;
+    class DesktopShell,FixedSidebar,DesktopHeader,DesktopMain,DesktopModals desktop;
+    class MobileShell,MobileTopNav,MobileDrawer,MobileMain,MobileBottomSheets mobile;

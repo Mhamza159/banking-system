@@ -1,0 +1,34 @@
+stateDiagram-v2
+    [*] --> PENDING : Transaction initiated with unique Idempotency-Key
+
+    state PENDING {
+        [*] --> InFlight : Idempotency lock active
+        InFlight --> CheckingBalance : Session opened
+        CheckingBalance --> WritingLedger : Balance verified >= amount
+    }
+
+    PENDING --> COMPLETED : Debit and Credit written & session.commitTransaction()
+    PENDING --> FAILED : Insufficient funds OR Account inactive OR DB session abort
+
+    state COMPLETED {
+        [*] --> FinalStateSuccess : Immutable terminal state
+        FinalStateSuccess --> CachedReplay : Replayed with same Idempotency-Key -> Returns 200 OK
+    }
+
+    state FAILED {
+        [*] --> FinalStateFailure : Immutable terminal state
+        FinalStateFailure --> ErrorReplay : Replayed with same Idempotency-Key -> Returns cached failure
+    }
+
+    COMPLETED --> [*]
+    FAILED --> [*]
+
+    note right of PENDING
+        If a second request arrives while in PENDING,
+        the system returns HTTP 409 Conflict.
+    end note
+
+    note right of COMPLETED
+        Once COMPLETED, ledger entries cannot be mutated.
+        Reversals must be executed as a new REFUND transaction.
+    end note

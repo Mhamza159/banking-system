@@ -1,0 +1,51 @@
+flowchart TD
+    ComponentReq(["UI Component calls Service Method<br/>(e.g. authService, accountService, transactionService)"]) --> AxiosInstance["Central Axios Client (src/services/api.js)"]
+
+    subgraph RequestPipeline["Axios Request Interceptor Pipeline"]
+        AxiosInstance --> SetBase["1. Set Base URL: http://localhost:3000/api/v1"]
+        SetBase --> SetCreds["2. Set withCredentials: true (Send HTTP-only cookies)"]
+        SetCreds --> SetHeaders["3. Set Content-Type: application/json"]
+        SetHeaders --> CheckIdemp{"Is Transfer Request?"}
+        CheckIdemp -->|Yes| AttachIdemp["Attach Header: Idempotency-Key: &lt;UUID v4&gt;"]
+        CheckIdemp -->|No| SendReq["Send HTTP Request"]
+        AttachIdemp --> SendReq
+    end
+
+    SendReq --> ExpressAPI["Express.js Server (:3000)"]
+    ExpressAPI --> MongoDB[("MongoDB Atlas")]
+    MongoDB --> ExpressAPI
+
+    ExpressAPI --> AxiosResponse["Axios Response Interceptor Pipeline"]
+
+    subgraph ResponsePipeline["Response Interceptor & Error Normalization"]
+        AxiosResponse --> StatusCheck{"HTTP Status Code?"}
+        
+        %% Success Branch
+        StatusCheck -->|200 / 201 Success| UnpackData["Unpack response.data<br/>Return { success: true, data: ... } directly to caller"]
+
+        %% Error Branch
+        StatusCheck -->|400 Bad Request| Err400["400 BAD_REQUEST / VALIDATION_ERROR<br/>Extract field error messages -> Render inline in form"]
+        StatusCheck -->|401 Unauthorized| Err401["401 UNAUTHORIZED / TOKEN_EXPIRED / REVOKED<br/>Emit 'banking:unauthorized' -> Reset AuthContext -> Redirect /login"]
+        StatusCheck -->|403 Forbidden| Err403["403 FORBIDDEN<br/>Trigger Toast: 'Access denied: You do not own this account'"]
+        StatusCheck -->|404 Not Found| Err404["404 NOT_FOUND<br/>Trigger Toast: 'Account or transaction resource not found'"]
+        StatusCheck -->|409 Conflict| Err409["409 CONFLICT<br/>Trigger Toast: 'Email already registered' or 'In-flight transaction conflict'"]
+        StatusCheck -->|500 / Network Error| Err500["500 INTERNAL_ERROR or Network Offline<br/>Mask technical trace -> Trigger Toast: 'Banking server temporarily unavailable'"]
+    end
+
+    UnpackData --> ResolvePromise(["Promise Resolved -> Component updates state & renders data"])
+    Err400 --> RejectPromise(["Promise Rejected -> Display user-friendly error banners"])
+    Err401 --> RejectPromise
+    Err403 --> RejectPromise
+    Err404 --> RejectPromise
+    Err409 --> RejectPromise
+    Err500 --> RejectPromise
+
+    classDef normal fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef success fill:#065f46,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+    classDef warning fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+    classDef error fill:#881337,stroke:#f43f5e,stroke-width:2px,color:#f8fafc;
+
+    class ComponentReq,AxiosInstance,SetBase,SetCreds,SetHeaders,CheckIdemp,AttachIdemp,SendReq,ExpressAPI,MongoDB,AxiosResponse,StatusCheck normal;
+    class UnpackData,ResolvePromise success;
+    class Err400,Err409 warning;
+    class Err401,Err403,Err404,Err500,RejectPromise error;

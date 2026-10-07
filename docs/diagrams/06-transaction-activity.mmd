@@ -1,0 +1,53 @@
+flowchart TD
+    Start(["Start: Client Sends POST /api/v1/transactions"]) --> CheckAuth{"Is Request Authenticated?"}
+    
+    CheckAuth -- No / Blacklisted --> Err401["Return 401 Unauthorized"]
+    CheckAuth -- Yes --> CheckIdemp{"Idempotency-Key present & valid UUID?"}
+    
+    CheckIdemp -- No --> Err400Idemp["Return 400 Bad Request<br/>(Missing or Invalid Idempotency-Key)"]
+    CheckIdemp -- Yes --> QueryIdemp["Query DB for existing Idempotency-Key"]
+    
+    QueryIdemp --> ExistsIdemp{"Key Already Exists in DB?"}
+    ExistsIdemp -- "Yes (COMPLETED)" --> ReturnReplay["Return 200 OK<br/>(Cached Idempotent Replay)"]
+    ExistsIdemp -- "Yes (PENDING)" --> Err409["Return 409 Conflict<br/>(In-flight request currently processing)"]
+    ExistsIdemp -- "Yes (FAILED)" --> ReturnFailedReceipt["Return 400 Bad Request<br/>(Prior failure reason)"]
+    
+    ExistsIdemp -- "No (New Transfer)" --> CheckAccounts{"Validate Accounts:<br/>1. Sender owned by caller?<br/>2. Sender != Receiver?<br/>3. Both Status == ACTIVE?"}
+    
+    CheckAccounts -- Invalid or Inactive --> ErrAccount["Return 400/403/404 Error<br/>(FROZEN, SUSPENDED, or SELF_TRANSFER)"]
+    
+    CheckAccounts -- Valid & Active --> StartSession["Start MongoDB ACID Session<br/>session.startTransaction()"]
+    
+    StartSession --> DeriveBal["Run Aggregation Pipeline inside Session:<br/>Calculate Sender Available Balance"]
+    
+    DeriveBal --> CheckBalance{"Available Balance >= Transfer Amount?"}
+    
+    CheckBalance -- No --> AbortSession["session.abortTransaction()<br/>session.endSession()"]
+    AbortSession --> ErrFunds["Return 400 Bad Request<br/>(INSUFFICIENT_FUNDS)"]
+    
+    CheckBalance -- Yes --> WritePending["1. Create Transaction (status: PENDING)"]
+    WritePending --> WriteDebit["2. Insert Ledger DEBIT (Sender Account, amount)"]
+    WriteDebit --> WriteCredit["3. Insert Ledger CREDIT (Receiver Account, amount)"]
+    WriteCredit --> WriteCompleted["4. Update Transaction (status: COMPLETED)"]
+    
+    WriteCompleted --> CommitSession["session.commitTransaction()<br/>session.endSession()"]
+    
+    CommitSession --> ForkAsync["Fork Post-Commit Actions"]
+    
+    ForkAsync --> Resp201["Return HTTP 201 Created<br/>(Transaction Receipt to Sender)"]
+    ForkAsync --> AsyncDebitMail["Async: Send Debit Email Alert to Sender"]
+    ForkAsync --> AsyncCreditMail["Async: Send Credit Email Alert to Receiver"]
+    
+    Resp201 --> Done(["End: Transfer Completed"])
+    AsyncDebitMail --> Done
+    AsyncCreditMail --> Done
+
+    classDef error fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b;
+    classDef success fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534;
+    classDef step fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef decision fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+
+    class Err401,Err400Idemp,Err409,ReturnFailedReceipt,ErrAccount,ErrFunds error;
+    class ReturnReplay,Resp201,Done success;
+    class StartSession,DeriveBal,WritePending,WriteDebit,WriteCredit,WriteCompleted,CommitSession,AsyncDebitMail,AsyncCreditMail step;
+    class CheckAuth,CheckIdemp,ExistsIdemp,CheckAccounts,CheckBalance decision;

@@ -1,0 +1,135 @@
+### Base Variables
+@baseUrl = http://localhost:3000/api/v1
+
+### 1. Health Check
+GET http://localhost:3000/health
+
+### 2. Register New User
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Hamza Tariq",
+  "email": "hamzahakim@example.com",
+  "password": "Password123!"
+}
+
+### 3. Duplicate Email Registration Test (Should return 409 Conflict)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Hamza Duplicate",
+  "email": "hamza@example.com",
+  "password": "Password123!"
+}
+
+### 4. Login With Valid Credentials (Sets HTTP-only Cookie)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "hamza@example.com",
+  "password": "Password123!"
+}
+
+### 5. Login With Invalid Password (Should return 401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "hamza@example.com",
+  "password": "WrongPassword999!"
+}
+
+### 6. Get Current User Profile (Protected Route - Uses Cookie from Login)
+GET {{baseUrl}}/auth/me
+
+### 7. Unauthenticated Profile Request (Should return 401 Unauthorized)
+GET {{baseUrl}}/auth/me
+
+### 8. Logout & Revoke Session (Blacklists token and clears cookie)
+POST {{baseUrl}}/auth/logout
+
+### 9. Attempt Accessing Profile with Revoked Token (Should return 401 Unauthorized)
+GET {{baseUrl}}/auth/me
+
+### =======================================================
+### PHASE 3: BANK ACCOUNT MANAGEMENT & FAUCET DEPOSIT
+### =======================================================
+
+### 8. Get All Accounts for Logged-In User
+GET {{baseUrl}}/accounts/me
+
+### 9. Create Secondary Checking Account
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+
+{
+  "accountType": "CHECKING",
+  "currency": "USD"
+}
+
+### 10. Attempt Duplicate Account Creation (Should return 409 Conflict)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+
+{
+  "accountType": "CHECKING",
+  "currency": "USD"
+}
+
+### 11. Deposit Faucet ($500.00 = 50,000 cents) - Replace with your account ID
+POST {{baseUrl}}/accounts/REPLACE_WITH_ACCOUNT_ID/deposit
+Content-Type: application/json
+
+{
+  "amountInCents": 50000
+}
+
+### =======================================================
+### PHASE 4: DOUBLE-ENTRY LEDGER & BALANCE AGGREGATION
+### =======================================================
+
+### 12. Get Account Balance (Calculated via Aggregation Pipeline: Credits - Debits)
+GET {{baseUrl}}/accounts/REPLACE_WITH_ACCOUNT_ID/balance
+
+### 13. Unauthorized Balance Query (Accessing with another user's cookie -> 403 Forbidden)
+GET {{baseUrl}}/accounts/REPLACE_WITH_ANOTHER_USER_ACCOUNT_ID/balance
+
+### =======================================================
+### PHASE 5: ACID TRANSACTION TRANSFERS & IDEMPOTENCY
+### =======================================================
+
+### 14. Atomic Money Transfer ($100.00 = 10,000 cents)
+POST {{baseUrl}}/transactions/transfer
+Content-Type: application/json
+Idempotency-Key: idemp-manual-test-01
+
+{
+  "senderAccountId": "REPLACE_WITH_SENDER_ACCOUNT_ID",
+  "receiverAccountId": "REPLACE_WITH_RECEIVER_ACCOUNT_ID",
+  "amountInCents": 10000,
+  "description": "Payment for consulting services"
+}
+
+### 15. Duplicate Transfer with Same Idempotency-Key (Returns Cached 200 OK)
+POST {{baseUrl}}/transactions/transfer
+Content-Type: application/json
+Idempotency-Key: idemp-manual-test-01
+
+{
+  "senderAccountId": "REPLACE_WITH_SENDER_ACCOUNT_ID",
+  "receiverAccountId": "REPLACE_WITH_RECEIVER_ACCOUNT_ID",
+  "amountInCents": 10000
+}
+
+### 16. Get Transaction History for Current User
+GET {{baseUrl}}/transactions/history?page=1&limit=10
+
+### 17. Get Single Transaction Receipt by ID
+GET {{baseUrl}}/transactions/REPLACE_WITH_TRANSACTION_ID
+
+

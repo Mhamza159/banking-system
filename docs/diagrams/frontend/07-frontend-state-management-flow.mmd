@@ -1,0 +1,65 @@
+flowchart TD
+    subgraph GlobalContexts["Global State Layer (React Context API)"]
+        subgraph AuthState["1. AuthContext"]
+            UserObj["user: { id, name, email, role }"]
+            AuthFlags["isAuthenticated: boolean<br/>isLoading: boolean"]
+            AuthMethods["Actions: login(), register(), logout(), checkSession()"]
+        end
+
+        subgraph BankingState["2. BankingContext"]
+            AccountList["accounts: Array of Account Documents"]
+            ActiveAccount["activeAccount: Selected Account (e.g. SAVINGS)"]
+            SyncTrigger["refreshBalances(): Triggers global re-fetch"]
+        end
+
+        subgraph ToastState["3. ToastContext"]
+            ToastList["toasts: Array of { id, type, message }"]
+            ToastMethods["Actions: showToast(type, msg), dismissToast(id)"]
+        end
+    end
+
+    subgraph ComponentConsumers["Component Viewport Consumers"]
+        HeaderComp["Header.jsx<br/>- User Name & Role<br/>- Active Account Selector<br/>- Logout Trigger"]
+        DashboardView["DashboardPage.jsx<br/>- BalanceCard (Listens to ActiveAccount)<br/>- RecentTransactions Feed"]
+        AccountsView["AccountsPage.jsx<br/>- Renders all accounts<br/>- Faucet Deposit Modal<br/>- Create Account Modal"]
+        TransferView["TransferPage.jsx<br/>- Source Account Selector<br/>- Transfer Confirmation Modal"]
+        TransactionsView["TransactionsPage.jsx<br/>- Paginated Transaction Table"]
+    end
+
+    subgraph LocalStateLayer["Local Component State (useState / useReducer)"]
+        FormState["Form Input State (Amount, Recipient, Description)"]
+        ModalState["Modal Visibility (isReviewOpen, isReceiptOpen, isFaucetOpen)"]
+        TableState["Table State (currentPage, filterStatus, searchQuery)"]
+        LoadingState["Action Loading (isSubmitting: boolean)"]
+    end
+
+    subgraph ReactiveSync["Reactive Financial Synchronization Cycle"]
+        DepositEvent["Faucet Deposit Completed<br/>POST /accounts/:id/deposit"] --> TriggerSync["Call BankingContext.refreshBalances()"]
+        TransferEvent["Money Transfer Completed<br/>POST /transactions/transfer"] --> TriggerSync
+        TriggerSync --> FetchMe["GET /accounts/me"]
+        TriggerSync --> FetchBal["GET /accounts/:id/balance"]
+        FetchMe --> UpdateAccList["Update BankingContext.accounts"]
+        FetchBal --> UpdateBal["Update BalanceCard & LedgerSummary"]
+    end
+
+    %% Bindings
+    AuthState -.->|Provides User & Session| HeaderComp & DashboardView & AccountsView & TransferView
+    BankingState -.->|Provides Accounts & Balance| HeaderComp & DashboardView & AccountsView & TransferView
+    ToastState -.->|Renders Floating Alerts| HeaderComp & TransferView & AccountsView
+
+    TransferView --> LocalStateLayer
+    AccountsView --> LocalStateLayer
+    TransactionsView --> LocalStateLayer
+
+    DepositEvent -.-> ToastState
+    TransferEvent -.-> ToastState
+
+    classDef global fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef views fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef local fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef sync fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+
+    class GlobalContexts,AuthState,BankingState,ToastState,UserObj,AuthFlags,AuthMethods,AccountList,ActiveAccount,SyncTrigger,ToastList,ToastMethods global;
+    class ComponentConsumers,HeaderComp,DashboardView,AccountsView,TransferView,TransactionsView views;
+    class LocalStateLayer,FormState,ModalState,TableState,LoadingState local;
+    class ReactiveSync,DepositEvent,TransferEvent,TriggerSync,FetchMe,FetchBal,UpdateAccList,UpdateBal sync;

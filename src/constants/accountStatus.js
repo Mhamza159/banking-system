@@ -1,0 +1,8 @@
+const ACCOUNT_STATUS = Object.freeze({
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  SUSPENDED: "SUSPENDED",
+  FROZEN: "FROZEN"
+});
+
+module.exports = ACCOUNT_STATUS;

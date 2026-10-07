@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor Client
+    participant AuthCtrl as Auth Controller
+    participant UserMod as User Model
+    participant AcctMod as Account Model
+    participant JWT as JWT Engine
+    participant Cookie as Cookie Dispatcher
+    participant EmailSvc as Email Service
+
+    Note over Client,EmailSvc: Part 1: User Registration
+    Client->>AuthCtrl: POST /api/v1/auth/register { name, email, password }
+    AuthCtrl->>UserMod: Check if email exists
+    alt Email already in use
+        UserMod-->>AuthCtrl: Duplicate found
+        AuthCtrl-->>Client: 409 Conflict ("Email already registered")
+    else Email available
+        AuthCtrl->>UserMod: Save new User
+        Note over UserMod: pre('save') hashes password using bcrypt (10 rounds)
+        UserMod->>UserMod: Document saved
+        AuthCtrl->>AcctMod: Auto-generate 10-digit number & create Savings Account
+        AcctMod->>AcctMod: Account saved (status: ACTIVE)
+        AuthCtrl->>EmailSvc: sendWelcomeEmail(user, account) [Async Non-blocking]
+        AuthCtrl-->>Client: 201 Created { user, account, message }
+    end
+
+    Note over Client,EmailSvc: Part 2: User Login
+    Client->>AuthCtrl: POST /api/v1/auth/login { email, password }
+    AuthCtrl->>UserMod: findOne({ email }).select('+password')
+    alt User not found
+        AuthCtrl-->>Client: 401 Unauthorized ("Invalid email or password")
+    else User exists
+        AuthCtrl->>UserMod: user.comparePassword(password)
+        alt Password Mismatch
+            AuthCtrl-->>Client: 401 Unauthorized ("Invalid email or password")
+        else Password Matches
+            AuthCtrl->>JWT: sign({ userId: user._id, role: user.role }, JWT_SECRET, { expiresIn: '24h' })
+            JWT-->>AuthCtrl: Signed Token String
+            AuthCtrl->>Cookie: Set-Cookie: token=token; HttpOnly; SameSite=Strict; Secure
+            AuthCtrl-->>Client: 200 OK { token, user, message }
+        end
+    end

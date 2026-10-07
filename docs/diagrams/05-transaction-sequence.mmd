@@ -1,0 +1,62 @@
+sequenceDiagram
+    autonumber
+    actor SenderClient as Sender Client
+    participant AuthGuard as authMiddleware
+    participant TxCtrl as Transaction Controller
+    participant IdempEngine as Idempotency Engine
+    participant LedgerSvc as Ledger Service
+    participant MongoSession as MongoDB ACID Session
+    participant EmailSvc as Email Service
+    actor ReceiverClient as Receiver User
+
+    SenderClient->>AuthGuard: POST /api/v1/transactions<br/>Headers: [Idempotency-Key: UUIDv4]<br/>Body: { senderAccountId, receiverAccountNumber, amountInCents, note }
+    
+    AuthGuard->>AuthGuard: Validate JWT & Blacklist
+    AuthGuard->>TxCtrl: Forward sanitized request (req.user attached)
+
+    TxCtrl->>IdempEngine: Query Transaction.findOne({ idempotencyKey })
+    alt Key exists & status == COMPLETED
+        IdempEngine-->>SenderClient: 200 OK (Return cached transaction receipt)
+    else Key exists & status == PENDING
+        IdempEngine-->>SenderClient: 409 Conflict ("Transaction is currently processing. Please wait.")
+    else Key does not exist (New Request)
+        TxCtrl->>TxCtrl: Validate senderAccountId belongs to req.user._id
+        TxCtrl->>TxCtrl: Validate senderAccount != receiverAccount (Self-Transfer check)
+        TxCtrl->>TxCtrl: Validate senderAccount.status == ACTIVE && receiverAccount.status == ACTIVE
+        
+        alt Account validation fails (Frozen, Suspended, or Not Found)
+            TxCtrl-->>SenderClient: 400/403/404 Error (Specific domain failure code)
+        else Accounts Valid & Active
+            TxCtrl->>MongoSession: session = mongoose.startSession()<br/>session.startTransaction()
+            Note over TxCtrl,MongoSession: ACID Transaction Boundary Begins
+            
+            TxCtrl->>LedgerSvc: getAccountBalance(senderAccountId, session)
+            Note over LedgerSvc: Executes MongoDB Aggregation Pipeline inside session
+            LedgerSvc-->>TxCtrl: availableBalanceInCents
+
+            alt availableBalanceInCents < amountInCents
+                TxCtrl->>MongoSession: session.abortTransaction()
+                TxCtrl->>MongoSession: session.endSession()
+                TxCtrl-->>SenderClient: 400 Bad Request ("INSUFFICIENT_FUNDS")
+            else Sufficient Balance Available
+                TxCtrl->>MongoSession: Create Transaction [status: PENDING]
+                TxCtrl->>MongoSession: Insert Ledger Entry 1: [DEBIT, senderAccountId, amountInCents]
+                TxCtrl->>MongoSession: Insert Ledger Entry 2: [CREDIT, receiverAccountId, amountInCents]
+                TxCtrl->>MongoSession: Update Transaction [status: COMPLETED]
+                
+                TxCtrl->>MongoSession: session.commitTransaction()
+                TxCtrl->>MongoSession: session.endSession()
+                Note over TxCtrl,MongoSession: ACID Transaction Committed (Zero Data Loss)
+
+                TxCtrl-->>SenderClient: 201 Created (Transaction Receipt, new balance)
+
+                par Non-Blocking Asynchronous Notifications
+                    TxCtrl->>EmailSvc: sendDebitAlert(senderUser, txReceipt)
+                    EmailSvc-->>SenderClient: Send Debit Alert Email
+                and
+                    TxCtrl->>EmailSvc: sendCreditAlert(receiverUser, txReceipt)
+                    EmailSvc-->>ReceiverClient: Send Credit Alert Email
+                end
+            end
+        end
+    end

@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as React UI (Login/Register)
+    participant AuthCtx as AuthContext
+    participant Axios as Axios API Client
+    participant Server as Express Server (:3000)
+    participant DB as MongoDB Atlas
+
+    %% --- SCENARIO 1: REGISTRATION ---
+    Note over User,DB: SCENARIO 1: Registration & Instant Account Provisioning
+    User->>UI: Fills name, email, password & submits
+    UI->>Axios: POST /api/v1/auth/register
+    Axios->>Server: HTTP POST (withCredentials: true)
+    Server->>DB: Hash password (bcrypt 10 rounds) & create User
+    Server->>DB: Auto-provision 10-digit Savings Account
+    Server-->>Axios: 201 Created + Set-Cookie: token=<jwt>; HttpOnly; SameSite=Strict
+    Axios-->>AuthCtx: { user, account, token }
+    AuthCtx-->>UI: Sets isAuthenticated: true, user: user
+    UI->>User: Redirects to /dashboard (Welcome toast displayed)
+
+    %% --- SCENARIO 2: SESSION HYDRATION ON REFRESH ---
+    Note over User,DB: SCENARIO 2: Page Refresh & Session Hydration
+    User->>UI: Hard Refresh Browser (F5)
+    UI->>AuthCtx: Mounts -> Checks initial state (isLoading: true)
+    AuthCtx->>Axios: GET /api/v1/auth/me
+    Axios->>Server: HTTP GET with Cookie: token=<jwt>
+    Server->>DB: Check token against Blacklist collection
+    alt Token is Revoked
+        Server-->>Axios: 401 Unauthorized ("Token has been revoked")
+        Axios-->>AuthCtx: Error: Session Expired
+        AuthCtx-->>UI: Reset user state -> Redirect to /login
+    else Token is Valid
+        Server->>DB: Find user by decoded token ID
+        Server-->>Axios: 200 OK { user: userProfile }
+        Axios-->>AuthCtx: Sets user state (isLoading: false, isAuthenticated: true)
+        AuthCtx-->>UI: Restores protected Dashboard view
+    end
+
+    %% --- SCENARIO 3: LOGOUT & TOKEN REVOCATION ---
+    Note over User,DB: SCENARIO 3: Secure Logout & Blacklist TTL Revocation
+    User->>UI: Clicks "Logout & Revoke Session"
+    UI->>AuthCtx: logout()
+    AuthCtx->>Axios: POST /api/v1/auth/logout
+    Axios->>Server: HTTP POST with Cookie: token=<jwt>
+    Server->>DB: Insert token into Blacklist collection (expiresAt: decoded.exp)
+    Server-->>Axios: Set-Cookie: token=none; Max-Age=0 + 200 OK
+    Axios-->>AuthCtx: Success
+    AuthCtx-->>UI: Wipes user & session state
+    UI->>User: Redirects to /login (Toast: "Logged out successfully")
+
+    %% --- SCENARIO 4: REPLAY ATTEMPT ---
+    Note over User,DB: SCENARIO 4: Revoked Token Replay Protection
+    User->>UI: Attempt accessing /api/v1/auth/me with old revoked token
+    UI->>Axios: GET /api/v1/auth/me
+    Axios->>Server: HTTP GET with old token
+    Server->>DB: Blacklist.findOne({ token }) -> Match Found!
+    Server-->>Axios: 401 Unauthorized ("Token has been revoked")
+    Axios-->>UI: Interceptor catches 401 -> Forces redirect to /login
