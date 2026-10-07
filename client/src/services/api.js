@@ -5,7 +5,7 @@ import axios from "axios";
  * Configured for session cookies (withCredentials: true), base URL, and standardized error interception.
  */
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1",
+  baseURL: import.meta.env.VITE_API_URL || "/api/v1",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json"
